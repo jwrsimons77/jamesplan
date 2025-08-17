@@ -1,0 +1,1242 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>247</title>
+
+    <!-- Removed Tailwind CDN (not needed; React app uses custom CSS). If needed later, install Tailwind via PostCSS/CLI. -->
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+      :root{
+        --bg:#f7f7f7;
+        --surface:#ffffff;
+        --ink:#111827;
+        --muted:#6b7280;
+        --line:#e5e7eb;
+        --brand:#0e7c66;
+        --brand-ink:#0b5d4e;
+        --chip:#f3f4f6;
+        --warn:#f59e0b;
+        --ok:#16a34a;
+        --danger:#ef4444;
+      }
+
+      /* Base reset */
+      body {
+        margin:0;
+        color:var(--ink);
+        background:var(--bg);
+        -webkit-tap-highlight-color: transparent;
+        font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", Inter, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        letter-spacing: -0.01em;
+      }
+
+      /* Cards and shadows */
+      .surface-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow:
+          0 1px 2px rgba(0,0,0,0.04),
+          0 8px 24px rgba(17,24,39,0.06);
+      }
+
+      .surface-tile {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow:
+          0 1px 2px rgba(0,0,0,0.04),
+          0 10px 20px rgba(17,24,39,0.05);
+      }
+
+      /* Pills / chips */
+      .pill {
+        border-radius: 9999px;
+        background: var(--chip);
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      .pill-ghost {
+        border-radius: 9999px;
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      .pill-brand {
+        background: rgba(14,124,102,0.1);
+        color: var(--brand-ink);
+      }
+
+      .muted { color: var(--muted); }
+
+      /* Translucent header */
+      .glass-header {
+        position: sticky;
+        top: 0;
+        backdrop-filter: saturate(1.8) blur(10px);
+        background: rgba(255,255,255,0.85);
+        border-bottom: 1px solid var(--line);
+        z-index: 40;
+      }
+
+      /* Progress bar */
+      .progress-rail {
+        height: 10px;
+        background: #eef2f7;
+        border-radius: 9999px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+      }
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--brand), #12b886);
+      }
+
+      /* Modal sheet */
+      .sheet {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        background: var(--surface);
+        border-top-left-radius: 24px;
+        border-top-right-radius: 24px;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+        transform: translateY(100%);
+        transition: transform .25s ease;
+        z-index: 50;
+      }
+      .sheet.open {
+        transform: translateY(0%);
+      }
+      .sheet-scrim {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.25);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease;
+        z-index: 40;
+      }
+      .sheet-scrim.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* Touchable */
+      .tappable {
+        transition: transform .04s ease, background .15s ease;
+      }
+      .tappable:active {
+        transform: translateY(1px);
+      }
+
+      /* Inputs as soft pills */
+      .soft-input {
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fbfbfb;
+        padding: 10px 12px;
+        font-size: 14px;
+        min-height: 44px;
+      }
+      .soft-input:focus {
+        outline: 2px solid rgba(14,124,102,0.25);
+        outline-offset: 0;
+        background: #fff;
+      }
+
+      /* Bottom nav */
+      .bottom-nav {
+        position: sticky;
+        bottom: 0;
+        background: rgba(255,255,255,0.96);
+        border-top: 1px solid var(--line);
+        backdrop-filter: saturate(1.5) blur(8px);
+        z-index: 30;
+      }
+
+      /* Accessibility helpers */
+      .sr-only {
+        position: absolute !important;
+        height: 1px; width: 1px;
+        overflow: hidden;
+        clip: rect(1px, 1px, 1px, 1px);
+        white-space: nowrap;
+      }
+
+      @media (min-width: 640px) {
+        .container {
+          max-width: 680px;
+        }
+      }
+      /* React app takes over UI */
+      #root { display:block; }
+      header.glass-header, main, nav.bottom-nav, #sheet, #scrim, #sheetX, #scrimX, #dayBar { display: none !important; }
+      /* Lightweight layout helpers for React components */
+      .wrap { max-width: 680px; margin: 0 auto; padding: 12px; }
+      .row { display:flex; align-items:center; gap:8px; }
+      .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+      .btn { border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:#fff; font-weight:600; min-height:44px; }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <!-- Legacy static header retained but hidden by CSS to avoid layout flash -->
+    <header class="glass-header">
+      <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+        <!-- Segmented control -->
+        <div class="inline-flex bg-white border border-[var(--line)] rounded-full overflow-hidden" role="tablist" aria-label="Primary segments">
+          <button aria-label="This week" aria-selected="true" role="tab" class="px-4 py-2 text-sm font-semibold bg-[var(--surface)] text-[var(--ink)] border-r border-[var(--line)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">This week</button>
+          <button aria-label="Program" role="tab" class="px-4 py-2 text-sm font-semibold text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">Program</button>
+        </div>
+
+        <!-- Avatar / settings -->
+        <button id="openSettings" class="tappable h-10 w-10 rounded-full bg-[var(--chip)] flex items-center justify-center border border-[var(--line)]" aria-label="Open settings">
+          <span class="text-lg">⚙️</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Settings Sheet (API Base) -->
+    <div id="scrimSettings" class="sheet-scrim"></div>
+    <div id="sheetSettings" class="sheet">
+      <div class="p-4">
+        <div class="mx-auto w-16 h-1.5 bg-[var(--line)] rounded-full mb-3"></div>
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold tracking-tight">Settings</h3>
+          <button id="closeSettings" class="pill-ghost px-3 py-1.5 text-sm">Done</button>
+        </div>
+
+        <div class="mt-4 surface-card p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-semibold">API URL</div>
+              <div class="text-sm muted">Point to your deployed backend</div>
+            </div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <input id="apiBase" class="soft-input w-full" placeholder="https://your-railway-service.up.railway.app" aria-label="API base URL" />
+            <button id="saveApi" class="tappable px-4 py-2 rounded-xl bg-[var(--brand)] text-white font-semibold" aria-label="Save API URL">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <main class="container mx-auto px-4 pt-4 pb-24">
+      <!-- Weekly Progress -->
+      <section aria-label="Weekly progress" class="mb-4">
+        <div class="surface-card p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm uppercase tracking-tight muted">Weekly progress</div>
+              <div id="weeklyProgressLabel" class="text-base font-semibold mt-1">0/5 sessions</div>
+            </div>
+            <span class="pill pill-brand px-3 py-1 text-sm">Goal 5</span>
+          </div>
+          <div class="progress-rail mt-3" aria-hidden="true">
+            <div id="weeklyProgressBar" class="progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick actions -->
+      <section class="mb-4">
+        <div class="grid grid-cols-4 gap-3">
+          <button class="surface-tile tappable p-3 flex flex-col items-center gap-2" aria-label="Locker room">
+            <div class="h-12 w-12 rounded-2xl bg-[var(--chip)] flex items-center justify-center text-xl">🧳</div>
+            <span class="text-xs font-semibold">Locker room</span>
+          </button>
+          <button class="surface-tile tappable p-3 flex flex-col items-center gap-2" aria-label="Guides">
+            <div class="h-12 w-12 rounded-2xl bg-[var(--chip)] flex items-center justify-center text-xl">📘</div>
+            <span class="text-xs font-semibold">Guides</span>
+          </button>
+          <button id="rearrangeBtn" class="surface-tile tappable p-3 flex flex-col items-center gap-2" aria-label="Rearrange">
+            <div class="h-12 w-12 rounded-2xl bg-[var(--chip)] flex items-center justify-center text-xl">🔀</div>
+            <span class="text-xs font-semibold">Rearrange</span>
+          </button>
+          <button class="surface-tile tappable p-3 flex flex-col items-center gap-2" aria-label="Program details">
+            <div class="h-12 w-12 rounded-2xl bg-[var(--chip)] flex items-center justify-center text-xl">📝</div>
+            <span class="text-xs font-semibold">Program details</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Promo banner -->
+      <section class="mb-4">
+        <div class="surface-card p-4 flex gap-3">
+          <div class="h-12 w-12 rounded-full bg-[var(--chip)] border border-[var(--line)] flex items-center justify-center text-lg">🏷️</div>
+          <div class="flex-1">
+            <div class="text-base font-bold">Weeks 1–4, Accumulation</div>
+            <div class="text-sm muted">Build volume and develop robust movement patterns. Expect higher reps and steady progress.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Today section -->
+      <section class="mb-4" aria-label="Today">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="pill px-3 py-1 text-xs">Today</span>
+          <div id="todayDateLabel" class="text-sm muted"></div>
+        </div>
+        <div id="todayCard" class="surface-card p-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div id="todayTitle" class="text-base font-semibold">—</div>
+              <div id="todaySubtitle" class="text-sm muted">—</div>
+            </div>
+            <div id="todayActions" class="flex items-center gap-2"></div>
+          </div>
+          <div id="todayExercises" class="mt-3 flex flex-col gap-2"></div>
+        </div>
+      </section>
+
+      <!-- Plan cards -->
+      <section class="mb-4" aria-label="Training plan">
+        <div id="planGrid" class="flex flex-col gap-3"></div>
+      </section>
+
+      <!-- Progress -->
+      <section class="mb-4">
+        <div class="surface-card p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-base font-semibold">Progress</div>
+              <div id="progressSubtitle" class="text-sm muted">Weekly running minutes</div>
+            </div>
+            <span id="progressMetric" class="pill px-3 py-1 text-xs">Default</span>
+          </div>
+          <div class="mt-3">
+            <canvas id="progressChart" height="140" aria-label="Progress chart"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Workout detail sheet -->
+    <div id="scrim" class="sheet-scrim"></div>
+    <section id="sheet" class="sheet" aria-modal="true" role="dialog" aria-label="Workout detail">
+      <div class="p-4">
+        <div class="mx-auto w-16 h-1.5 bg-[var(--line)] rounded-full mb-3"></div>
+
+        <!-- Stepper header -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2" id="stepper">
+            <button class="pill px-3 py-1 text-xs" data-step="W">W</button>
+            <button class="pill px-3 py-1 text-xs" data-step="A">A</button>
+            <button class="pill px-3 py-1 text-xs" data-step="B">B</button>
+            <button class="pill px-3 py-1 text-xs" data-step="C">C</button>
+            <button class="pill px-3 py-1 text-xs" data-step="D">D</button>
+            <button class="pill px-3 py-1 text-xs" data-step="E">E</button>
+          </div>
+          <button id="closeSheet" class="pill-ghost px-3 py-1.5 text-sm">Close</button>
+        </div>
+
+        <div id="sheetHead" class="mt-3">
+          <div id="sheetTitle" class="text-base font-semibold">—</div>
+          <div id="sheetScheme" class="text-sm muted">EMOM | Every 1 min for 12mins</div>
+        </div>
+
+        <!-- Exercises list -->
+        <div id="sheetList" class="mt-3 flex flex-col gap-2"></div>
+
+        <!-- Exercise detail -->
+        <div id="exerciseDetail" class="mt-3 hidden">
+          <div class="surface-card p-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <div id="exTitle" class="text-base font-semibold">—</div>
+                <div id="exNotes" class="text-sm muted">—</div>
+              </div>
+              <span class="pill px-2 py-1 text-xs">Strength</span>
+            </div>
+
+            <div class="mt-3 text-sm muted">Complete up to 6 sets</div>
+            <div id="setTable" class="mt-2 grid grid-cols-1 gap-2"></div>
+
+            <div class="mt-3 flex items-center gap-2">
+              <button class="pill-ghost px-3 py-2 text-sm">Add note</button>
+              <button class="pill-ghost px-3 py-2 text-sm">Swap</button>
+              <button id="exPrev" class="pill-ghost px-3 py-2 text-sm">Previous</button>
+              <div class="flex-1"></div>
+              <button id="exSaveSet" class="tappable px-4 py-2 rounded-xl bg-[var(--brand)] text-white font-semibold">Add set</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cross-day Rearrange Sheet -->
+    <div id="scrimX" class="sheet-scrim"></div>
+    <section id="sheetX" class="sheet" aria-modal="true" role="dialog" aria-label="Rearrange workouts across days">
+      <div class="p-4">
+        <div class="mx-auto w-16 h-1.5 bg-[var(--line)] rounded-full mb-3"></div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-lg font-semibold tracking-tight">Rearrange workouts</h3>
+          <div class="flex items-center gap-2">
+            <button id="xCancel" class="pill-ghost px-3 py-1.5 text-sm">Cancel</button>
+            <button id="xSave" class="tappable px-3 py-1.5 rounded-xl bg-[var(--brand)] text-white text-sm">Save</button>
+          </div>
+        </div>
+        <div id="xGrid" class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <!-- columns injected -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav">
+      <div class="container mx-auto px-6">
+        <div class="grid grid-cols-4">
+          <button class="tappable py-3 flex flex-col items-center" aria-label="Plan">
+            <span class="text-xl">🏋️</span>
+            <span class="text-xs font-semibold">Plan</span>
+          </button>
+          <button class="tappable py-3 flex flex-col items-center" aria-label="Progress">
+            <span class="text-xl">📈</span>
+            <span class="text-xs muted">Progress</span>
+          </button>
+          <button class="tappable py-3 flex flex-col items-center" aria-label="History">
+            <span class="text-xl">🗂️</span>
+            <span class="text-xs muted">History</span>
+          </button>
+          <button class="tappable py-3 flex flex-col items-center" aria-label="More">
+            <span class="text-xl">…</span>
+            <span class="text-xs muted">More</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Day rearrange bar -->
+    <div id="dayBar" class="sticky top-14 z-30 px-4 hidden">
+      <div class="container mx-auto">
+        <div class="surface-card p-3 flex items-center justify-between">
+          <span class="text-sm font-semibold">Rearrange workouts (days)</span>
+          <div class="flex items-center gap-2">
+            <button id="dayCancel" class="pill-ghost px-3 py-1.5 text-sm">Cancel</button>
+            <button id="daySave" class="tappable px-3 py-1.5 rounded-xl bg-[var(--brand)] text-white text-sm">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ---- API helpers (preserve localStorage key) ----
+      const API_KEY = 'apiBase';
+      function getApiBase() {
+        const v = localStorage.getItem(API_KEY);
+        return v || 'http://localhost:8080';
+      }
+      function setApiBase(v) {
+        localStorage.setItem(API_KEY, v);
+      }
+      async function apiGet(path) {
+        const res = await fetch(getApiBase() + path);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }
+      async function apiPost(path, body) {
+        const res = await fetch(getApiBase() + path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }
+
+      // ---- State ----
+      const state = {
+        plan: null,
+        days: [],
+        todayDay: null,
+        todayLogId: null,
+        selectedExercise: null,
+        chart: null,
+        loggedTodayExerciseIds: new Set(),
+        openDayId: null,
+        exerciseRearrangeMode: false,
+        exerciseTempOrder: [],
+        exerciseTempMoves: {}, // {exId: {to: dayId, data}}
+        dayRearrangeMode: false,
+        dayTempOrder: [],
+      };
+
+      // ---- Weekday labels ----
+      const WEEKDAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+      // ---- Day assignment (fixed Monday..Sunday slots -> assigned plan_day_id) ----
+      const DAY_ASSIGN_KEY = 'dayAssign';
+      function getDefaultAssignment() {
+        return [...state.days].sort((a,b) => a.day_number - b.day_number).map(d => d.id);
+      }
+      function getStoredAssignment() {
+        try {
+          const raw = localStorage.getItem(DAY_ASSIGN_KEY);
+          const ids = raw ? JSON.parse(raw) : null;
+          const set = new Set(state.days.map(d => d.id));
+          if (Array.isArray(ids) && ids.length === state.days.length && ids.every(id => set.has(id))) return ids;
+        } catch {}
+        return getDefaultAssignment();
+      }
+      function setStoredAssignment(ids) {
+        localStorage.setItem(DAY_ASSIGN_KEY, JSON.stringify(ids));
+      }
+      function getAssignedDays() {
+        const ids = state.dayRearrangeMode && state.dayTempOrder.length ? state.dayTempOrder : getStoredAssignment();
+        const map = new Map(state.days.map(d => [d.id, d]));
+        return ids.map(id => map.get(id)).filter(Boolean);
+      }
+
+      // Exercise reordering persisted per day
+      const EX_ORDER_PREFIX = 'exOrder:'; // exOrder:<plan_day_id> -> [exercise_id,...]
+      function getExerciseStoredOrder(dayId, exercises) {
+        const defaultIds = exercises.map(e => e.id);
+        try {
+          const raw = localStorage.getItem(EX_ORDER_PREFIX + dayId);
+          const ids = raw ? JSON.parse(raw) : null;
+          const set = new Set(defaultIds);
+          if (Array.isArray(ids) && ids.length === defaultIds.length && ids.every(id => set.has(id))) return ids;
+        } catch {}
+        return defaultIds;
+      }
+      function setExerciseStoredOrder(dayId, ids) {
+        localStorage.setItem(EX_ORDER_PREFIX + dayId, JSON.stringify(ids));
+      }
+      function orderExercises(dayId, exercises) {
+        const byId = new Map(exercises.map(e => [e.id, e]));
+        const ids = state.exerciseRearrangeMode && state.openDayId === dayId && state.exerciseTempOrder.length
+          ? state.exerciseTempOrder
+          : getExerciseStoredOrder(dayId, exercises);
+        return ids.map(id => byId.get(id)).filter(Boolean);
+      }
+
+      // ---- Cross-day exercise move helpers ----
+      const EX_MOVE_KEY = 'exMoves';
+      function getExMoves() {
+        try {
+          return JSON.parse(localStorage.getItem(EX_MOVE_KEY) || '{}') || {};
+        } catch { return {}; }
+      }
+      function setExMoves(map) {
+        localStorage.setItem(EX_MOVE_KEY, JSON.stringify(map));
+      }
+      function applyExerciseMovesForDay(dayId, exercises) {
+        const moves = getExMoves();
+        const movedOut = new Set();
+        Object.entries(moves).forEach(([id, m]) => {
+          if (String(m.from) === String(dayId) && String(m.to) !== String(dayId)) movedOut.add(String(id));
+        });
+        const base = exercises.filter(ex => !movedOut.has(String(ex.id)));
+        const incoming = [];
+        Object.entries(moves).forEach(([id, m]) => {
+          if (String(m.to) === String(dayId)) incoming.push(m.data);
+        });
+        // Avoid duplicates if API already includes
+        const present = new Set(base.map(e => String(e.id)));
+        incoming.forEach(e => { if (!present.has(String(e.id))) base.push(e); });
+        return base;
+      }
+
+      // ---- UI Builders ----
+      function renderPlanCards() {
+        const grid = document.getElementById('planGrid');
+        grid.innerHTML = '';
+
+        const assignedDays = getAssignedDays();
+
+        assignedDays.forEach((assigned, i) => {
+          const wrap = document.createElement('div');
+          wrap.className = 'surface-card p-3';
+          const isToday = state.todayDay && state.todayDay.id === assigned.id;
+
+          const title = document.createElement('div');
+          title.className = 'flex items-center justify-between';
+          title.innerHTML = `
+            <div class="flex items-center gap-3">
+              <div>
+                <div class="text-base font-semibold">${i+1}. ${WEEKDAYS[i]}</div>
+                <div class="text-sm muted">${assigned.focus || ''}</div>
+              </div>
+            </div>
+            ${state.dayRearrangeMode ? `
+              <div class=\"flex items-center gap-1\" role=\"group\" aria-label=\"Reorder workouts\">
+                <button data-day-up=\"${assigned.id}\" class=\"pill-ghost h-8 w-8 flex items-center justify-center ${i===0 ? 'opacity-40 pointer-events-none' : ''}\" aria-label=\"Move workout earlier\">▲</button>
+                <button data-day-down=\"${assigned.id}\" class=\"pill-ghost h-8 w-8 flex items-center justify-center ${i===assignedDays.length-1 ? 'opacity-40 pointer-events-none' : ''}\" aria-label=\"Move workout later\">▼</button>
+              </div>
+            ` : `
+              <button class="h-8 w-8 rounded-full border border-[var(--line)] flex items-center justify-center ${isToday ? 'bg-[var(--brand)] text-white' : 'bg-[var(--chip)]'}" aria-label="Open day">${isToday ? '✓' : '›'}</button>
+            `}
+          `;
+          wrap.appendChild(title);
+
+          const kpis = document.createElement('div');
+          kpis.className = 'mt-3 grid grid-cols-4 gap-2';
+          const mkKpi = (label, val) => `
+            <div class="flex flex-col items-start">
+              <span class="text-[11px] uppercase tracking-tight muted">${label}</span>
+              <span class="font-semibold">${val ?? '—'}</span>
+            </div>`;
+          kpis.innerHTML = mkKpi('Time','—') + mkKpi('Weight','—') + mkKpi('Sets','—') + mkKpi('PB','—');
+          wrap.appendChild(kpis);
+
+          if (!state.dayRearrangeMode) {
+            wrap.querySelector('button').addEventListener('click', () => openDaySheet(assigned, null, `${i+1}. ${WEEKDAYS[i]}`));
+          } else {
+            const upBtn = title.querySelector(`[data-day-up="${assigned.id}"]`);
+            const downBtn = title.querySelector(`[data-day-down="${assigned.id}"]`);
+            const order = state.dayTempOrder.length ? state.dayTempOrder : assignedDays.map(d => d.id);
+            const moveDay = (id, dir) => {
+              const arr = [...order];
+              const idx = arr.indexOf(id);
+              const to = idx + dir;
+              if (to < 0 || to >= arr.length) return;
+              const [m] = arr.splice(idx, 1);
+              arr.splice(to, 0, m);
+              state.dayTempOrder = arr;
+              renderPlanCards();
+              renderToday();
+            };
+            upBtn && upBtn.addEventListener('click', () => moveDay(assigned.id, -1));
+            downBtn && downBtn.addEventListener('click', () => moveDay(assigned.id, +1));
+          }
+
+          grid.appendChild(wrap);
+        });
+      }
+
+      // Enable/disable exercise rearrange inside sheet
+      function enableExerciseRearrange(dayId, order) {
+        state.openDayId = dayId;
+        state.exerciseRearrangeMode = true;
+        state.exerciseTempOrder = order.slice();
+        renderSheetExerciseList(dayId);
+      }
+      function disableExerciseRearrange(dayId, save) {
+        if (save && state.exerciseTempOrder.length) setExerciseStoredOrder(dayId, state.exerciseTempOrder);
+        state.exerciseRearrangeMode = false;
+        state.exerciseTempOrder = [];
+        renderSheetExerciseList(dayId);
+      }
+
+      function renderToday() {
+        const today = new Date();
+        const label = document.getElementById('todayDateLabel');
+        label.textContent = today.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+
+        const assignedDays = getAssignedDays();
+        const todayIdx = (today.getDay() + 6) % 7; // Monday=0
+        state.todayDay = assignedDays[todayIdx];
+        document.getElementById('todayTitle').textContent = state.todayDay ? `${WEEKDAYS[todayIdx]}` : '—';
+        document.getElementById('todaySubtitle').textContent = state.todayDay ? (state.todayDay.focus || '') : '—';
+
+        const exWrap = document.getElementById('todayExercises');
+        exWrap.innerHTML = '';
+        if (!state.todayDay) return;
+
+        // Actions (Reorder current day and Start log)
+        const actions = document.getElementById('todayActions');
+        actions.innerHTML = '';
+        if (!state.dayRearrangeMode) {
+          const reorderBtn = document.createElement('button');
+          reorderBtn.className = 'pill-ghost px-3 py-1.5 text-sm';
+          reorderBtn.textContent = 'Reorder day';
+          reorderBtn.onclick = enterTodayRearrange;
+          const startBtn = document.createElement('button');
+          startBtn.id = 'startTodayBtn';
+          startBtn.className = 'tappable px-3 py-2 rounded-xl bg-[var(--brand)] text-white text-sm font-semibold';
+          startBtn.textContent = 'Start log';
+          startBtn.onclick = async () => {
+            const today = fmtDateISO(new Date());
+            const log = await apiPost('/api/logs', { plan_day_id: state.todayDay.id, date: today });
+            state.todayLogId = log.id;
+            renderWeeklyProgress();
+            renderToday();
+            openDaySheet(state.todayDay);
+          };
+          actions.appendChild(reorderBtn);
+          actions.appendChild(startBtn);
+        } else {
+          const idx = getTodayIndex();
+          const order = state.dayTempOrder.length ? state.dayTempOrder : getStoredAssignment();
+          const upBtn = document.createElement('button');
+          upBtn.className = 'pill-ghost h-8 w-8 flex items-center justify-center' + (idx===0 ? ' opacity-40 pointer-events-none' : '');
+          upBtn.textContent = '▲';
+          upBtn.onclick = () => {
+            if (idx<=0) return; const arr=[...order]; const [m]=arr.splice(idx,1); arr.splice(idx-1,0,m); state.dayTempOrder=arr; renderPlanCards(); renderToday();
+          };
+          const downBtn = document.createElement('button');
+          downBtn.className = 'pill-ghost h-8 w-8 flex items-center justify-center' + (idx===order.length-1 ? ' opacity-40 pointer-events-none' : '');
+          downBtn.textContent = '▼';
+          downBtn.onclick = () => {
+            if (idx>=order.length-1) return; const arr=[...order]; const [m]=arr.splice(idx,1); arr.splice(idx+1,0,m); state.dayTempOrder=arr; renderPlanCards(); renderToday();
+          };
+          const doneBtn = document.createElement('button');
+          doneBtn.className = 'tappable px-3 py-1.5 rounded-xl bg-[var(--brand)] text-white text-sm';
+          doneBtn.textContent = 'Done';
+          doneBtn.onclick = () => exitDayRearrange(true);
+          actions.appendChild(upBtn);
+          actions.appendChild(downBtn);
+          actions.appendChild(doneBtn);
+        }
+
+        apiGet(`/api/plan-days/${state.todayDay.id}/exercises`).then((exercises) => {
+          // Apply cross-day moves and per-day order
+          const withMoves = applyExerciseMovesForDay(state.todayDay.id, exercises);
+          const ordered = orderExercises(state.todayDay.id, withMoves);
+
+          ordered.forEach((ex) => {
+            const row = document.createElement('button');
+            row.className = 'tappable w-full flex items-center justify-between px-3 py-2 border border-[var(--line)] rounded-full bg-white';
+            row.setAttribute('aria-label', `Exercise ${ex.name}`);
+            const ticked = state.loggedTodayExerciseIds.has(ex.id);
+            row.innerHTML = `
+              <div class="flex items-center gap-2">
+                <span class="text-[13px] font-semibold">${ex.name}</span>
+                <span class="pill px-2 py-0.5 text-[11px]">${(ex.modality || '').toUpperCase()}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                ${ticked ? '<span class="pill px-2 py-0.5 text-[11px] bg-[var(--ok)] text-white">✓ Logged</span>' : ''}
+                <span class="text-lg">›</span>
+              </div>`;
+            row.addEventListener('click', () => {
+              openDaySheet(state.todayDay);
+            });
+            exWrap.appendChild(row);
+          });
+        });
+      }
+
+      // ---- Rearrange Mode ----
+      function enableRearrange() {
+        state.rearrangeMode = true;
+        state.tempOrder = getStoredOrder(state.days);
+        document.getElementById('rearrangeBar').classList.remove('hidden');
+        renderPlanCards();
+      }
+      function disableRearrange(save) {
+        if (save && state.tempOrder.length) {
+          setStoredOrder(state.tempOrder);
+        }
+        state.rearrangeMode = false;
+        state.tempOrder = [];
+        document.getElementById('rearrangeBar').classList.add('hidden');
+        renderPlanCards();
+        renderToday();
+      }
+
+      // ---- Sheet ----
+      function openDaySheet(day, focusExercise, displayLabel) {
+        const sheet = document.getElementById('sheet');
+        const scrim = document.getElementById('scrim');
+        sheet.classList.add('open');
+        scrim.classList.add('open');
+
+        state.openDayId = day.id;
+
+        document.getElementById('sheetTitle').textContent = displayLabel || `${day.day_number}. ${day.name}`;
+        document.getElementById('sheetScheme').textContent = day.focus || '—';
+
+        const detail = document.getElementById('exerciseDetail');
+        detail.classList.add('hidden');
+        state.selectedExercise = null;
+
+        renderSheetExerciseList(day.id, focusExercise);
+      }
+
+      function renderSheetExerciseList(dayId, focusExercise) {
+        const list = document.getElementById('sheetList');
+        list.innerHTML = '';
+
+        // Header controls for rearrange
+        const bar = document.createElement('div');
+        bar.className = 'flex items-center justify-between mb-2';
+        bar.innerHTML = `
+          <span class="text-sm font-semibold">Exercises</span>
+          ${state.exerciseRearrangeMode ? `
+            <div class="flex items-center gap-2">
+              <button id="exCancel" class="pill-ghost px-3 py-1.5 text-sm">Cancel</button>
+              <button id="exSave" class="tappable px-3 py-1.5 rounded-xl bg-[var(--brand)] text-white text-sm">Save</button>
+            </div>
+          ` : `<button id="exRearrange" class="pill-ghost px-3 py-1.5 text-sm">Rearrange</button>`}
+        `;
+        list.appendChild(bar);
+
+        apiGet(`/api/plan-days/${dayId}/exercises`).then((exercises) => {
+          const withMoves = applyExerciseMovesForDay(dayId, exercises);
+          const orderIds = state.exerciseRearrangeMode && state.openDayId === dayId && state.exerciseTempOrder.length
+            ? state.exerciseTempOrder
+            : getExerciseStoredOrder(dayId, withMoves);
+          const idToEx = new Map(withMoves.map(e => [e.id, e]));
+          const ordered = orderIds.map(id => idToEx.get(id)).filter(Boolean);
+
+          const days = getAssignedDays();
+
+          ordered.forEach((ex, i) => {
+            const card = document.createElement('div');
+            card.className = 'surface-card p-3';
+            card.style.borderRadius = '20px';
+            const inner = document.createElement('div');
+            inner.className = 'flex items-center justify-between';
+            inner.innerHTML = `
+              <div>
+                <div class="text-base font-semibold">${i+1}. ${ex.name}</div>
+                <div class="text-sm muted">${ex.notes || ''}</div>
+              </div>
+              ${state.exerciseRearrangeMode ? `
+                <div class="flex items-center gap-1" role="group" aria-label="Reorder exercise">
+                  <button data-move="up" data-id="${ex.id}" class="pill-ghost h-8 w-8 flex items-center justify-center ${i===0 ? 'opacity-40 pointer-events-none' : ''}" aria-label="Move up">▲</button>
+                  <button data-move="down" data-id="${ex.id}" class="pill-ghost h-8 w-8 flex items-center justify-center ${i===ordered.length-1 ? 'opacity-40 pointer-events-none' : ''}" aria-label="Move down">▼</button>
+                </div>
+              ` : `
+                <div class="flex items-center gap-2">
+                  <button class="pill-ghost px-3 py-1 text-sm">Progress</button>
+                  <button class="tappable px-3 py-1.5 rounded-xl bg-[var(--brand)] text-white text-sm">Log</button>
+                </div>
+              `}`;
+            card.appendChild(inner);
+
+            if (!state.exerciseRearrangeMode) {
+              const [progressBtn, logBtn] = inner.querySelectorAll('button');
+              progressBtn.addEventListener('click', () => setChartExercise(ex));
+              logBtn.addEventListener('click', () => openExerciseDetail(ex));
+
+              // Previously had Move-to chips here; removed per request
+            } else {
+              const upBtn = inner.querySelector('[data-move="up"]');
+              const downBtn = inner.querySelector('[data-move="down"]');
+              const move = (from, to) => {
+                const arr = [...orderIds];
+                const [m] = arr.splice(from, 1);
+                arr.splice(to, 0, m);
+                state.exerciseTempOrder = arr;
+                renderSheetExerciseList(dayId);
+              };
+              upBtn && upBtn.addEventListener('click', () => move(i, Math.max(0, i-1)));
+              downBtn && downBtn.addEventListener('click', () => move(i, Math.min(ordered.length-1, i+1)));
+            }
+
+            list.appendChild(card);
+          });
+
+          // After rendering list, wire the stepper navigation
+          wireStepper(ordered);
+
+          // Wire header buttons
+          const exRearrange = document.getElementById('exRearrange');
+          const exCancel = document.getElementById('exCancel');
+          const exSave = document.getElementById('exSave');
+          if (exRearrange) exRearrange.onclick = () => enableExerciseRearrange(dayId, orderIds);
+          if (exCancel) exCancel.onclick = () => disableExerciseRearrange(dayId, false);
+          if (exSave) exSave.onclick = () => disableExerciseRearrange(dayId, true);
+
+          if (focusExercise) openExerciseDetail(focusExercise);
+          wireStepper(ordered);
+        });
+      }
+
+      function closeDaySheet() {
+        document.getElementById('sheet').classList.remove('open');
+        document.getElementById('scrim').classList.remove('open');
+      }
+
+      function openExerciseDetail(ex) {
+        state.selectedExercise = ex;
+        document.getElementById('sheetList').innerHTML = '';
+        const detail = document.getElementById('exerciseDetail');
+        detail.classList.remove('hidden');
+        document.getElementById('exTitle').textContent = ex.name;
+        document.getElementById('exNotes').textContent = ex.notes || '';
+
+        // Build 6 rows of inputs
+        const table = document.getElementById('setTable');
+        table.innerHTML = '';
+        for (let i=1; i<=6; i++) {
+          const row = document.createElement('div');
+          row.className = 'grid grid-cols-8 gap-2 items-center rounded-xl';
+          row.innerHTML = `
+            <div class="col-span-1 text-sm muted">#${i}</div>
+            ${ex.modality === 'run' ? `
+              <input class="soft-input col-span-2" placeholder="Distance (m)" inputmode="numeric" aria-label="Distance meters row ${i}" />
+              <input class="soft-input col-span-2" placeholder="Duration (sec)" inputmode="numeric" aria-label="Duration seconds row ${i}" />
+              <input class="soft-input col-span-2" placeholder="RPE" inputmode="numeric" aria-label="RPE row ${i}" />
+            ` : `
+              <input class="soft-input col-span-2" placeholder="Weight (kg)" inputmode="decimal" aria-label="Weight kg row ${i}" />
+              <input class="soft-input col-span-2" placeholder="Reps" inputmode="numeric" aria-label="Reps row ${i}" />
+              <input class="soft-input col-span-2" placeholder="RPE" inputmode="numeric" aria-label="RPE row ${i}" />
+            `}
+            <div class="col-span-1 text-right">
+              <span class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-[var(--chip)] text-[var(--ink)]">✓</span>
+            </div>`;
+          table.appendChild(row);
+        }
+
+        document.getElementById('exSaveSet').onclick = saveSet;
+        document.getElementById('exPrev').onclick = () => {
+          // back to list inside sheet
+          const assignedDays = getAssignedDays();
+          openDaySheet(assignedDays[0]);
+        };
+      }
+
+      async function saveSet() {
+        if (!state.selectedExercise || !state.todayDay) return;
+        // Ensure we have a log for today
+        if (!state.todayLogId) {
+          const today = fmtDateISO(new Date());
+          const log = await apiPost('/api/logs', { plan_day_id: state.todayDay.id, date: today });
+          state.todayLogId = log.id;
+        }
+        // Read the first incomplete row
+        const rows = Array.from(document.querySelectorAll('#setTable > div'));
+        const ex = state.selectedExercise;
+        for (let idx = 0; idx < rows.length; idx++) {
+          const row = rows[idx];
+          const inputs = row.querySelectorAll('input');
+          if (ex.modality === 'run') {
+            const [distEl, durEl, rpeEl] = inputs;
+            const hasValues = (distEl && distEl.value) || (durEl && durEl.value) || (rpeEl && rpeEl.value);
+            if (hasValues) {
+              await apiPost(`/api/logs/${state.todayLogId}/sets`, {
+                exercise_id: ex.id,
+                set_number: idx + 1,
+                weight: null,
+                reps: null,
+                rpe: rpeEl.value ? Number(rpeEl.value) : null,
+                distance_m: distEl.value ? Number(distEl.value) : null,
+                duration_sec: durEl.value ? Number(durEl.value) : null,
+                notes: ''
+              });
+              // mark completed style
+              row.classList.add('bg-emerald-50');
+              const tick = row.querySelector('span');
+              if (tick) { tick.classList.remove('bg-[var(--chip)]'); tick.classList.add('bg-[var(--ok)]','text-white'); }
+              // clear
+              distEl.value = '';
+              durEl.value = '';
+              rpeEl.value = '';
+              state.loggedTodayExerciseIds.add(ex.id);
+              break;
+            }
+          } else {
+            const [wEl, rEl, rpeEl] = inputs;
+            const hasValues = (wEl && wEl.value) || (rEl && rEl.value) || (rpeEl && rpeEl.value);
+            if (hasValues) {
+              await apiPost(`/api/logs/${state.todayLogId}/sets`, {
+                exercise_id: ex.id,
+                set_number: idx + 1,
+                weight: wEl.value ? Number(wEl.value) : null,
+                reps: rEl.value ? Number(rEl.value) : null,
+                rpe: rpeEl.value ? Number(rpeEl.value) : null,
+                distance_m: null,
+                duration_sec: null,
+                notes: ''
+              });
+              row.classList.add('bg-emerald-50');
+              const tick = row.querySelector('span');
+              if (tick) { tick.classList.remove('bg-[var(--chip)]'); tick.classList.add('bg-[var(--ok)]','text-white'); }
+              wEl.value = '';
+              rEl.value = '';
+              rpeEl.value = '';
+              state.loggedTodayExerciseIds.add(ex.id);
+              break;
+            }
+          }
+        }
+        renderToday();
+      }
+
+      // ---- Weekly progress ----
+      function startOfWeek(d) {
+        const x = new Date(d);
+        const day = x.getDay();
+        const diff = (day + 6) % 7;
+        x.setHours(0,0,0,0);
+        x.setDate(x.getDate() - diff);
+        return x;
+      }
+      async function renderWeeklyProgress() {
+        try {
+          const allLogs = await apiGet('/api/logs');
+          const start = startOfWeek(new Date());
+          const end = new Date(start);
+          end.setDate(start.getDate() + 7);
+          const count = allLogs.filter(l => {
+            const d = new Date(l.date);
+            return d >= start && d < end;
+          }).length;
+          const label = document.getElementById('weeklyProgressLabel');
+          label.textContent = `${count}/5 sessions`;
+          const pct = Math.max(0, Math.min(100, (count/5)*100));
+          document.getElementById('weeklyProgressBar').style.width = pct + '%';
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // ---- Chart ----
+      let chart;
+      async function setChartExercise(ex) {
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        const data = await apiGet(`/api/progress/strength/${ex.id}`);
+        const labels = data.map(d => d.date);
+        const values = data.map(d => Number(d.est_1rm));
+        document.getElementById('progressSubtitle').textContent = `Est. 1RM • ${ex.name}`;
+        document.getElementById('progressMetric').textContent = 'Strength';
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: { labels, datasets: [{ label: 'Est. 1RM', data: values, borderColor: '#0e7c66', tension: .25, pointRadius: 2 }] },
+          options: { responsive: true, scales: { x: { ticks: { autoSkip: true, maxTicksLimit: 8 } }, y: { beginAtZero: false } }, plugins: { legend: { display: false } } }
+        });
+      }
+
+      async function renderDefaultChart() {
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        const weeks = await apiGet('/api/progress/running/weekly');
+        const labels = weeks.map(w => w.week);
+        const values = weeks.map(w => Number(w.minutes));
+        document.getElementById('progressSubtitle').textContent = 'Weekly running minutes';
+        document.getElementById('progressMetric').textContent = 'Running';
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: { labels, datasets: [{ label: 'Minutes', data: values, borderColor: '#94a3b8', tension: .25, pointRadius: 2 }] },
+          options: { responsive: true, scales: { x: { ticks: { autoSkip: true, maxTicksLimit: 8 } }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        });
+      }
+
+      // ---- Settings & Boot ----
+      function openSettings() {
+        document.getElementById('sheetSettings').classList.add('open');
+        document.getElementById('scrimSettings').classList.add('open');
+      }
+      function closeSettings() {
+        document.getElementById('sheetSettings').classList.remove('open');
+        document.getElementById('scrimSettings').classList.remove('open');
+      }
+
+      async function boot() {
+        // Settings
+        document.getElementById('openSettings').onclick = openSettings;
+        document.getElementById('closeSettings').onclick = closeSettings;
+        document.getElementById('scrimSettings').onclick = closeSettings;
+        const apiInput = document.getElementById('apiBase');
+        apiInput.value = getApiBase();
+        document.getElementById('saveApi').onclick = () => { setApiBase(apiInput.value.trim()); location.reload(); };
+
+        // Rearrange tile opens cross-day sheet
+        document.getElementById('rearrangeBtn').onclick = () => {
+          // toggle day rearrange mode
+          state.dayRearrangeMode = true;
+          state.dayTempOrder = getStoredAssignment();
+          document.getElementById('dayBar').classList.remove('hidden');
+          renderPlanCards();
+        };
+        document.getElementById('dayCancel').onclick = () => {
+          state.dayRearrangeMode = false;
+          state.dayTempOrder = [];
+          document.getElementById('dayBar').classList.add('hidden');
+          renderPlanCards();
+        };
+        document.getElementById('daySave').onclick = () => {
+          if (state.dayTempOrder.length) setStoredAssignment(state.dayTempOrder);
+          state.dayRearrangeMode = false;
+          state.dayTempOrder = [];
+          document.getElementById('dayBar').classList.add('hidden');
+          renderPlanCards();
+          renderToday();
+        };
+        // Remove cross-day sheet wiring from quick action to avoid confusion
+        document.getElementById('xCancel').onclick = () => closeXRearrange(false);
+        document.getElementById('xSave').onclick = () => closeXRearrange(true);
+        document.getElementById('scrimX').onclick = () => closeXRearrange(true);
+
+        // Sheet
+        document.getElementById('closeSheet').onclick = closeDaySheet;
+        document.getElementById('scrim').onclick = closeDaySheet;
+
+        // Data
+        try {
+          const resp = await apiGet('/api/plan');
+          state.plan = resp?.plan || null;
+          state.days = resp?.days || [];
+        } catch (e) {
+          const main = document.querySelector('main');
+          const err = document.createElement('div');
+          err.className = 'surface-card p-4 text-[var(--danger)] font-semibold';
+          err.textContent = 'Could not load plan. Open settings (top-right) to set API URL and ensure backend is running.';
+          main.prepend(err);
+          return;
+        }
+
+        renderPlanCards();
+        renderToday();
+        renderWeeklyProgress();
+        renderDefaultChart();
+
+        // Start Today handler
+        document.getElementById('startTodayBtn').onclick = async () => {
+          if (!state.todayDay) return;
+          const today = fmtDateISO(new Date());
+          const log = await apiPost('/api/logs', { plan_day_id: state.todayDay.id, date: today });
+          state.todayLogId = log.id;
+          renderWeeklyProgress();
+          renderToday();
+          openDaySheet(state.todayDay);
+        };
+      }
+
+      function wireStepper(exercises) {
+        const stepper = document.getElementById('stepper');
+        if (!stepper) return;
+        const btns = Array.from(stepper.querySelectorAll('button[data-step]'));
+        const firstByLetter = {};
+        exercises.forEach((ex, idx) => {
+          const ch = (ex.name || '').trim().charAt(0).toUpperCase();
+          if (ch && !(ch in firstByLetter)) firstByLetter[ch] = idx;
+        });
+        const list = document.getElementById('sheetList');
+        btns.forEach(btn => {
+          const letter = btn.getAttribute('data-step');
+          btn.onclick = () => {
+            // clear active
+            btns.forEach(b => b.classList.remove('pill-brand'));
+            btn.classList.add('pill-brand');
+            const idx = firstByLetter[letter];
+            if (idx != null) {
+              const cards = list.querySelectorAll('.surface-card');
+              const el = cards[idx];
+              if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          };
+        });
+      }
+
+      // ---- Cross-day Rearrange Sheet (workouts between days) ----
+      function openXRearrange() {
+        document.getElementById('sheetX').classList.add('open');
+        document.getElementById('scrimX').classList.add('open');
+        renderXGrid();
+      }
+      function closeXRearrange(save) {
+        if (save) {
+          // persist moves already inside xState
+          setExMoves(xState.moves);
+        } else {
+          // discard
+        }
+        document.getElementById('sheetX').classList.remove('open');
+        document.getElementById('scrimX').classList.remove('open');
+        renderToday();
+      }
+      const xState = { moves: {}, columns: {} };
+      function renderXGrid() {
+        const grid = document.getElementById('xGrid');
+        grid.innerHTML = '';
+        xState.moves = getExMoves();
+        const days = getAssignedDays();
+        const dayIdToIndex = new Map(days.map((d, idx) => [d.id, idx]));
+
+        // Fetch exercises for all days in parallel
+        Promise.all(days.map(d => apiGet(`/api/plan-days/${d.id}/exercises`).then(exs => ({ day: d, exs }))))
+          .then(results => {
+            results.forEach(({ day, exs }) => {
+              // Apply existing moves to columns
+              const withMoves = applyExerciseMovesForDay(day.id, exs);
+              xState.columns[day.id] = withMoves.map(e => ({ ...e }));
+            });
+
+            // Render columns
+            days.forEach((d, idx) => {
+              const col = document.createElement('div');
+              col.className = 'surface-card p-3';
+              const head = document.createElement('div');
+              head.className = 'text-sm font-semibold mb-2';
+              head.textContent = `${idx+1}. ${d.name}`;
+              col.appendChild(head);
+
+              const list = document.createElement('div');
+              list.className = 'flex flex-col gap-2';
+
+              const items = xState.columns[d.id] || [];
+              items.forEach((ex, i) => {
+                const item = document.createElement('div');
+                item.className = 'border border-[var(--line)] bg-white rounded-xl p-2 flex items-center justify-between';
+                item.innerHTML = `
+                  <div class=\"text-xs\">${ex.name}</div>
+                  <div class=\"flex items-center gap-1\">
+                    <button class=\"pill-ghost h-7 w-7 flex items-center justify-center ${i===0 ? 'opacity-40 pointer-events-none' : ''}\" data-up=\"${i}\" aria-label=\"Move up\">▲</button>
+                    <button class=\"pill-ghost h-7 w-7 flex items-center justify-center ${i===items.length-1 ? 'opacity-40 pointer-events-none' : ''}\" data-down=\"${i}\" aria-label=\"Move down\">▼</button>
+                    <button class=\"pill-ghost h-7 w-7 flex items-center justify-center ${idx===0 ? 'opacity-40 pointer-events-none' : ''}\" data-left=\"${i}\" aria-label=\"Move to previous day\">◀</button>
+                    <button class=\"pill-ghost h-7 w-7 flex items-center justify-center ${idx===days.length-1 ? 'opacity-40 pointer-events-none' : ''}\" data-right=\"${i}\" aria-label=\"Move to next day\">▶</button>
+                  </div>`;
+
+                // Reorder within column
+                const moveWithin = (from, to) => {
+                  const arr = xState.columns[d.id];
+                  const [m] = arr.splice(from, 1);
+                  arr.splice(to, 0, m);
+                  renderXGrid();
+                };
+                item.querySelector('[data-up]')?.addEventListener('click', () => moveWithin(i, Math.max(0, i-1)));
+                item.querySelector('[data-down]')?.addEventListener('click', () => moveWithin(i, Math.min(items.length-1, i+1)));
+
+                // Move across columns
+                const moveAcross = (fromIdx, toDayIdx) => {
+                  const fromArr = xState.columns[d.id];
+                  const [m] = fromArr.splice(fromIdx, 1);
+                  const toDay = days[toDayIdx];
+                  const toArr = xState.columns[toDay.id] || (xState.columns[toDay.id] = []);
+                  toArr.push(m);
+                  // record move mapping
+                  xState.moves[String(m.id)] = { from: d.id, to: toDay.id, data: m };
+                  renderXGrid();
+                };
+                item.querySelector('[data-left]')?.addEventListener('click', () => moveAcross(i, idx-1));
+                item.querySelector('[data-right]')?.addEventListener('click', () => moveAcross(i, idx+1));
+
+                list.appendChild(item);
+              });
+
+              col.appendChild(list);
+              grid.appendChild(col);
+            });
+          });
+      }
+
+      function getTodayIndex() {
+        // Index of slot for today given current assignment length (always 7)
+        return (new Date().getDay() + 6) % 7; // Monday=0
+      }
+      function enterTodayRearrange() {
+        state.dayRearrangeMode = true;
+        state.dayTempOrder = getStoredAssignment();
+        document.getElementById('dayBar').classList.remove('hidden');
+        renderPlanCards();
+        renderToday();
+      }
+      function exitDayRearrange(save) {
+        if (save && state.dayTempOrder.length) setStoredAssignment(state.dayTempOrder);
+        state.dayRearrangeMode = false;
+        state.dayTempOrder = [];
+        document.getElementById('dayBar').classList.add('hidden');
+        renderPlanCards();
+        renderToday();
+      }
+
+      // Wire cross-day sheet controls later in boot()
+
+      // Legacy boot is no-op under React UI
+    </script>
+  </body>
+</html>
