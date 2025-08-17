@@ -1,5 +1,6 @@
 const KEY = 'apiBase';
-const ENV_BASE = (typeof import !== 'undefined' && typeof import.meta !== 'undefined' && import.meta.env)
+// Read Vite env at build-time in the browser. Guard for SSR/build tools.
+const ENV_BASE = (typeof import.meta !== 'undefined' && import.meta.env)
   ? import.meta.env.VITE_API_BASE
   : undefined;
 export function getApiBase() {
