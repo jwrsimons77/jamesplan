@@ -182,15 +182,15 @@ function SetTable({ exercise, onSaveRows, userId }){
               <div style={{width:24, flex:'0 0 auto', fontSize:'12px', fontWeight:'600'}}>#{i+1}</div>
               {!isRun ? (
                 <>
-                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'14px', padding:'8px 6px'}} placeholder="Wt" value={r.weight||''} onChange={e=>update(i, {weight: e.target.value ? Number(e.target.value) : null})} />
-                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'14px', padding:'8px 6px'}} placeholder="Reps" value={r.reps||''} onChange={e=>update(i, {reps: e.target.value ? Number(e.target.value) : null})} />
-                  <input className="soft-input" style={{flex:'1 1 0', width:'auto', minWidth:0, maxWidth:'20%', fontSize:'14px', padding:'8px 4px'}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'16px', padding:'8px 6px'}} placeholder="Wt" value={r.weight||''} onChange={e=>update(i, {weight: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'16px', padding:'8px 6px'}} placeholder="Reps" value={r.reps||''} onChange={e=>update(i, {reps: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'1 1 0', width:'auto', minWidth:0, maxWidth:'20%', fontSize:'16px', padding:'8px 4px'}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
                 </>
               ) : (
                 <>
-                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'40%', fontSize:'14px', padding:'8px 6px'}} placeholder="Distance" value={r.distance_m||''} onChange={e=>update(i, {distance_m: e.target.value ? Number(e.target.value) : null})} />
-                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'14px', padding:'8px 6px'}} placeholder="Time" value={r.duration_sec||''} onChange={e=>update(i, {duration_sec: e.target.value ? Number(e.target.value) : null})} />
-                  <input className="soft-input" style={{flex:'1 1 0', width:'auto', minWidth:0, maxWidth:'20%', fontSize:'14px', padding:'8px 4px'}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'40%', fontSize:'16px', padding:'8px 6px'}} placeholder="Distance" value={r.distance_m||''} onChange={e=>update(i, {distance_m: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'16px', padding:'8px 6px'}} placeholder="Time" value={r.duration_sec||''} onChange={e=>update(i, {duration_sec: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'1 1 0', width:'auto', minWidth:0, maxWidth:'20%', fontSize:'16px', padding:'8px 4px'}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
                 </>
               )}
               <div style={{width:12, flex:'0 0 auto', textAlign:'center', fontSize:'10px', color:'var(--ok)'}}>{has ? '✓' : ''}</div>
