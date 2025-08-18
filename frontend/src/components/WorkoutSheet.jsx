@@ -177,30 +177,32 @@ function SetTable({ exercise, onSaveRows, userId }){
         const has = !!(r.weight||r.reps||r.rpe||r.distance_m||r.duration_sec||r.notes);
         const hint = i===0 ? rows[0]._suggest : null;
         return (
-          <div key={i} className="row" style={{gap:3, alignItems:'center', marginBottom:6, flexWrap:'nowrap', width:'100%', maxWidth:'100%'}}>
-            <div style={{width:24, flex:'0 0 auto', fontSize:'12px', fontWeight:'600'}}>#{i+1}</div>
-            {!isRun ? (
-              <>
-                <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'14px', padding:'8px 6px'}} placeholder="Wt" value={r.weight||''} onChange={e=>update(i, {weight: e.target.value ? Number(e.target.value) : null})} />
-                <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'14px', padding:'8px 6px'}} placeholder="Reps" value={r.reps||''} onChange={e=>update(i, {reps: e.target.value ? Number(e.target.value) : null})} />
-                <input className="soft-input" style={{flex:'1 1 0', width:'auto', minWidth:0, maxWidth:'20%', fontSize:'14px', padding:'8px 4px'}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
-              </>
-            ) : (
-              <>
-                <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'40%', fontSize:'14px', padding:'8px 6px'}} placeholder="Distance" value={r.distance_m||''} onChange={e=>update(i, {distance_m: e.target.value ? Number(e.target.value) : null})} />
-                <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'14px', padding:'8px 6px'}} placeholder="Time" value={r.duration_sec||''} onChange={e=>update(i, {duration_sec: e.target.value ? Number(e.target.value) : null})} />
-                <input className="soft-input" style={{flex:'1 1 0', width:'auto', minWidth:0, maxWidth:'20%', fontSize:'14px', padding:'8px 4px'}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
-              </>
-            )}
-            <div style={{width:12, flex:'0 0 auto', textAlign:'center', fontSize:'10px', color:'var(--ok)'}}>{has ? '✓' : ''}</div>
-          </div>
-          {/* Show suggestion hint below the row for better mobile layout */}
-          {i===0 && hint && (
-            <div style={{marginBottom:8, fontSize:'12px', color:'var(--muted)', paddingLeft:'40px'}}>
-              {hint.type==='strength' && hint.deltaKg ? `Try ${formatKg((Number(r.weight)||0)+hint.deltaKg)} (+${hint.deltaKg}kg)` : null}
-              {hint.type==='run' && hint.pct ? `Try ${Math.round((Number(r.distance_m)||0) * (1+hint.pct))}m (+${Math.round(hint.pct*100)}%)` : null}
+          <React.Fragment key={i}>
+            <div className="row" style={{gap:3, alignItems:'center', marginBottom:6, flexWrap:'nowrap', width:'100%', maxWidth:'100%'}}>
+              <div style={{width:24, flex:'0 0 auto', fontSize:'12px', fontWeight:'600'}}>#{i+1}</div>
+              {!isRun ? (
+                <>
+                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'14px', padding:'8px 6px'}} placeholder="Wt" value={r.weight||''} onChange={e=>update(i, {weight: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'14px', padding:'8px 6px'}} placeholder="Reps" value={r.reps||''} onChange={e=>update(i, {reps: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'1 1 0', width:'auto', minWidth:0, maxWidth:'20%', fontSize:'14px', padding:'8px 4px'}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
+                </>
+              ) : (
+                <>
+                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'40%', fontSize:'14px', padding:'8px 6px'}} placeholder="Distance" value={r.distance_m||''} onChange={e=>update(i, {distance_m: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'14px', padding:'8px 6px'}} placeholder="Time" value={r.duration_sec||''} onChange={e=>update(i, {duration_sec: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'1 1 0', width:'auto', minWidth:0, maxWidth:'20%', fontSize:'14px', padding:'8px 4px'}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
+                </>
+              )}
+              <div style={{width:12, flex:'0 0 auto', textAlign:'center', fontSize:'10px', color:'var(--ok)'}}>{has ? '✓' : ''}</div>
             </div>
-          )}
+            {/* Show suggestion hint below the row for better mobile layout */}
+            {i===0 && hint && (
+              <div style={{marginBottom:8, fontSize:'12px', color:'var(--muted)', paddingLeft:'40px'}}>
+                {hint.type==='strength' && hint.deltaKg ? `Try ${formatKg((Number(r.weight)||0)+hint.deltaKg)} (+${hint.deltaKg}kg)` : null}
+                {hint.type==='run' && hint.pct ? `Try ${Math.round((Number(r.distance_m)||0) * (1+hint.pct))}m (+${Math.round(hint.pct*100)}%)` : null}
+              </div>
+            )}
+          </React.Fragment>
         )
       })}
       <div className="row workout-actions" style={{gap:8, marginTop:8}}>
