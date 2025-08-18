@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="format-detection" content="telephone=no, email=no, address=no" />
+    <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -29,29 +31,67 @@
         --warn:#f59e0b;
         --ok:#16a34a;
         --danger:#ef4444;
-        accent-color: var(--brand);
+        /* Brand-wide accent color for native widgets (checkbox, radio, range, progress, etc.) */
+        accent-color: #0e7c66;
         color-scheme: light;
       }
 
-      /* Base reset */
+      /* Base reset with iOS Safari fixes */
+      html { 
+        height: 100%; 
+        -webkit-text-size-adjust: 100%; /* keep 16px sizing to prevent iOS zoom */
+      }
       body {
         margin:0;
         color:var(--ink);
         background:var(--bg);
-        -webkit-tap-highlight-color: transparent;
+        -webkit-tap-highlight-color: transparent; /* remove blue tap ripple */
         -webkit-font-smoothing: antialiased;
         height: 100%;
         overscroll-behavior: contain;
         font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", Inter, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
         letter-spacing: -0.01em;
       }
-      * { -webkit-tap-highlight-color: rgba(0,0,0,0); }
-      html { height: 100%; }
+      * { -webkit-tap-highlight-color: rgba(0,0,0,0); } /* extra safeguard */
 
-      button, input, select, textarea { -webkit-appearance: none; appearance: none; }
-      button:focus { outline: none; }
-      input:focus { outline: none; }
-      .btn:focus-visible, .soft-input:focus-visible { outline: 2px solid rgba(14,124,102,0.45); outline-offset: 2px; }
+      /* Normalize anchor/link colors (no Safari blue) */
+      a, a:visited, a:active { 
+        color: var(--ink) !important; 
+        text-decoration-color: currentColor; 
+      }
+      a:hover { 
+        color: var(--ink); 
+        text-decoration: underline; 
+      }
+
+      /* Custom accessible focus ring (no iOS blue ring) */
+      :focus { outline: none; }
+      :focus-visible { 
+        outline: 2px solid #0e7c66; 
+        outline-offset: 2px; 
+      }
+
+      /* Remove native iOS styling that injects tint */
+      input, select, textarea, button {
+        -webkit-appearance: none;
+        appearance: none;
+        border-radius: 8px; /* keep your rounded look */
+        font-size: 16px;    /* avoid iOS zoom */
+        line-height: 1.2;
+      }
+      select { 
+        background-image: none; /* remove iOS dropdown chevron when custom styled */
+      }
+
+      /* Safari autofill (prevents teal/blue bg and text) */
+      input:-webkit-autofill,
+      textarea:-webkit-autofill,
+      select:-webkit-autofill {
+        -webkit-text-fill-color: var(--ink);
+        transition: background-color 9999s ease-out; /* suppress flash */
+        -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+        box-shadow: 0 0 0 1000px var(--surface) inset;
+      }
 
       /* Cards and shadows */
       .surface-card {
@@ -202,11 +242,29 @@
       .row { display:flex; align-items:center; gap:8px; }
       .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
       .btn { border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:#fff; font-weight:600; min-height:44px; }
-      .btn { color: var(--ink) !important; cursor: pointer; }
-      .btn * { color: inherit !important; }
-      .btn:active, .btn:hover, .btn:focus { color: var(--ink) !important; background: #fff; border-color: var(--line); }
-      .pill, .pill * { color: var(--ink) !important; }
-      a { color: var(--ink) !important; text-decoration: none; }
+      /* Ensure all button-like components inherit ink color (no iOS blue) */
+      .btn { 
+        color: var(--ink) !important; 
+        cursor: pointer; 
+        background: #fff; 
+      }
+      .btn * { 
+        color: inherit !important; 
+      }
+      .btn:active, .btn:hover, .btn:focus { 
+        color: var(--ink) !important; 
+        background: #fff; 
+        border-color: var(--line); 
+      }
+      .pill, .pill * { 
+        color: var(--ink) !important; 
+        background: var(--chip); 
+      }
+
+      /* Keep inputs/controls using brand accent for toggles/ranges etc. */
+      progress, meter, input[type="range"] { 
+        accent-color: #0e7c66; 
+      }
 
       /* Workout modal responsive layout */
       .workout-modal { width: min(680px, 100vw); margin: 0 auto; max-height: calc(100svh - 8px); padding-bottom: env(safe-area-inset-bottom); background: var(--surface); }
