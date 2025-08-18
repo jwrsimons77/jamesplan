@@ -184,6 +184,27 @@
       .row { display:flex; align-items:center; gap:8px; }
       .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
       .btn { border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:#fff; font-weight:600; min-height:44px; }
+
+      /* Workout modal responsive layout */
+      .workout-modal { width: min(680px, 100vw); margin: 0 auto; }
+      .workout-modal .topbar { position: sticky; top: 0; background: var(--surface); z-index: 2; padding-bottom: 6px; }
+      .workout-modal .chip-row { display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling: touch; padding: 4px 0 4px 12px; flex: 1 1 auto; }
+      .workout-modal .chip-row::-webkit-scrollbar { display:none; }
+      .workout-modal .topbar-actions { display:flex; gap:8px; align-items:center; }
+      .workout-modal .sheet-body { height: calc(90vh - 56px); overflow-y: auto; }
+      .workout-actions { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .workout-actions .btn { width: 100%; }
+
+      @media (max-width: 600px) {
+        .workout-modal { left: 0 !important; right: 0 !important; width: 100vw !important; border-top-left-radius: 16px; border-top-right-radius: 16px; }
+        .workout-modal .sheet-body { height: calc(90vh - 56px); overflow-y: auto; padding-bottom: 12px; }
+        .workout-modal .topbar { padding-bottom: 8px; }
+        .workout-modal .topbar-actions .btn { min-width: 70px; padding: 8px 10px; }
+      }
+
+      @media (min-width: 640px) {
+        .workout-actions { grid-template-columns: repeat(4, minmax(0,1fr)); }
+      }
     </style>
   </head>
   <body class="min-h-screen">

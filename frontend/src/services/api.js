@@ -44,13 +44,38 @@ export const PlanApi = {
   putOrder(plan_day_ids) {
     return apiPut('/api/plan/order', { plan_day_ids });
   },
-  getLogsSummary(plan_id) {
-    return apiGet(`/api/logs/summary?plan_id=${encodeURIComponent(plan_id)}`);
+  getLogsSummary(plan_id, user_id) {
+    const qp = new URLSearchParams({ plan_id: String(plan_id) });
+    if (user_id != null) qp.set('user_id', String(user_id));
+    return apiGet(`/api/logs/summary?${qp.toString()}`);
   },
-  startLog(plan_day_id, dateISO) {
-    return apiPost('/api/logs', { plan_day_id, date: dateISO });
+  startLog(plan_day_id, dateISO, user_id) {
+    return apiPost('/api/logs', { plan_day_id, date: dateISO, user_id });
   },
   addSet(logId, payload) {
     return apiPost(`/api/logs/${logId}/sets`, payload);
+  },
+  getLastSet(exercise_id, user_id) {
+    const qp = new URLSearchParams({ exercise_id: String(exercise_id) });
+    if (user_id != null) qp.set('user_id', String(user_id));
+    return apiGet(`/api/last-set?${qp.toString()}`);
+  },
+  getCalendar(range){
+    const qp = new URLSearchParams();
+    if (range?.from) qp.set('from', range.from);
+    if (range?.to) qp.set('to', range.to);
+    const s = qp.toString();
+    return apiGet(`/api/plan/calendar${s ? ('?' + s) : ''}`);
+  },
+  replaceExerciseSets(logId, exerciseId, rows){
+    return apiPut(`/api/logs/${logId}/exercises/${exerciseId}/sets`, { rows });
+  },
+  getExerciseSets(logId, exerciseId){
+    return apiGet(`/api/logs/${logId}/exercises/${exerciseId}/sets`);
+  },
+  getRecentSets(exercise_id, user_id, limit=2){
+    const qp = new URLSearchParams({ exercise_id: String(exercise_id), limit: String(limit) });
+    if (user_id != null) qp.set('user_id', String(user_id));
+    return apiGet(`/api/recent-sets?${qp.toString()}`);
   }
 }

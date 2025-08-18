@@ -46,14 +46,36 @@ app.get('/api/plan-days/:dayId/exercises', async (req, res) => {
   }
 });
 
+// Calendar: fetch scheduled dates for a range (inclusive)
+app.get('/api/plan/calendar', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const plan = await pool.query('SELECT id FROM plans LIMIT 1');
+    if (!plan.rows.length) return res.json([]);
+    const planId = plan.rows[0].id;
+    const q = await pool.query(
+      `SELECT scheduled_date, plan_day_id, day_number, week_index
+       FROM plan_calendar
+       WHERE plan_id=$1 AND ($2::date IS NULL OR scheduled_date >= $2::date)
+         AND ($3::date IS NULL OR scheduled_date <= $3::date)
+       ORDER BY scheduled_date ASC`,
+      [planId, from || null, to || null]
+    );
+    res.json(q.rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load calendar' });
+  }
+});
+
 // --------- Logs ---------
-// Create a workout log header
+// Create a workout log header (optional user_id)
 app.post('/api/logs', async (req, res) => {
   try {
-    const { plan_day_id, date } = req.body;
+    const { plan_day_id, date, user_id } = req.body;
     const q = await pool.query(
-      `INSERT INTO logs (plan_day_id, date) VALUES ($1, $2) RETURNING *`,
-      [plan_day_id, date]
+      `INSERT INTO logs (plan_day_id, date, user_id) VALUES ($1, $2, $3) RETURNING *`,
+      [plan_day_id, date, user_id || null]
     );
     res.json(q.rows[0]);
   } catch (e) {
@@ -80,10 +102,86 @@ app.post('/api/logs/:logId/sets', async (req, res) => {
   }
 });
 
-// Optional: summarize latest log metrics per plan day
+// Replace all sets for a specific exercise within a log (idempotent amend)
+app.put('/api/logs/:logId/exercises/:exerciseId/sets', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { logId, exerciseId } = req.params;
+    const { rows } = req.body || {};
+    if (!Array.isArray(rows)) return res.status(400).json({ error: 'rows array required' });
+    await client.query('BEGIN');
+    await client.query('DELETE FROM log_sets WHERE log_id=$1 AND exercise_id=$2', [logId, exerciseId]);
+    for (const r of rows) {
+      const has = r && (r.weight!=null || r.reps!=null || r.rpe!=null || r.distance_m!=null || r.duration_sec!=null || (r.notes && r.notes.length));
+      if (!has) continue;
+      await client.query(
+        `INSERT INTO log_sets (log_id, exercise_id, set_number, weight, reps, rpe, distance_m, duration_sec, notes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [logId, exerciseId, r.set_number || null, r.weight || null, r.reps || null, r.rpe || null, r.distance_m || null, r.duration_sec || null, r.notes || null]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error(e);
+    res.status(500).json({ error: 'Failed to replace sets' });
+  } finally {
+    client.release();
+  }
+});
+
+// Fetch existing sets for a log/exercise (for amend/prefill within the same log)
+app.get('/api/logs/:logId/exercises/:exerciseId/sets', async (req, res) => {
+  try {
+    const { logId, exerciseId } = req.params;
+    const q = await pool.query(
+      `SELECT id, set_number, weight, reps, rpe, distance_m, duration_sec, notes
+       FROM log_sets
+       WHERE log_id=$1 AND exercise_id=$2
+       ORDER BY set_number NULLS LAST, id ASC`,
+      [logId, exerciseId]
+    );
+    res.json(q.rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load sets' });
+  }
+});
+
+// Recent sessions summary for an exercise (one representative set per log)
+app.get('/api/recent-sets', async (req, res) => {
+  try {
+    const { exercise_id, user_id, limit } = req.query;
+    if (!exercise_id) return res.status(400).json({ error: 'exercise_id required' });
+    const lim = Math.max(1, Math.min(10, Number(limit || 2)));
+    const q = await pool.query(
+      `WITH ranked AS (
+         SELECT l.id AS log_id, l.date,
+                ls.set_number, ls.weight, ls.reps, ls.rpe, ls.distance_m, ls.duration_sec, ls.notes,
+                ROW_NUMBER() OVER (PARTITION BY l.id ORDER BY ls.set_number DESC, ls.id DESC) AS rn
+         FROM logs l
+         JOIN log_sets ls ON l.id = ls.log_id
+         WHERE ls.exercise_id = $1 AND ($2::int IS NULL OR l.user_id = $2::int)
+       )
+       SELECT log_id, date, set_number, weight, reps, rpe, distance_m, duration_sec
+       FROM ranked
+       WHERE rn = 1
+       ORDER BY date DESC, log_id DESC
+       LIMIT $3`,
+      [exercise_id, user_id || null, lim]
+    );
+    res.json(q.rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load recent sets' });
+  }
+});
+
+// Optional: summarize latest log metrics per plan day, scoped by user_id if provided
 app.get('/api/logs/summary', async (req, res) => {
   try {
-    const { plan_id } = req.query;
+    const { plan_id, user_id } = req.query;
     if (!plan_id) return res.status(400).json({ error: 'plan_id required' });
     // Find latest log per plan_day_id, then aggregate sets and max weight
     const q = await pool.query(
@@ -92,7 +190,7 @@ app.get('/api/logs/summary', async (req, res) => {
                 ROW_NUMBER() OVER (PARTITION BY l.plan_day_id ORDER BY l.date DESC, l.id DESC) AS rn
          FROM logs l
          JOIN plan_days d ON d.id = l.plan_day_id
-         WHERE d.plan_id = $1
+         WHERE d.plan_id = $1 AND ($2::int IS NULL OR l.user_id = $2::int)
        )
        SELECT d.id AS plan_day_id,
               COALESCE(COUNT(ls.id) FILTER (WHERE latest.rn = 1), 0) AS sets,
@@ -104,7 +202,7 @@ app.get('/api/logs/summary', async (req, res) => {
        WHERE d.plan_id = $1
        GROUP BY d.id
        ORDER BY d.id`
-      , [plan_id]);
+      , [plan_id, user_id || null]);
     const map = {};
     for (const row of q.rows) {
       map[row.plan_day_id] = {
@@ -143,13 +241,14 @@ app.get('/api/logs', async (req, res) => {
 app.get('/api/progress/strength/:exerciseId', async (req, res) => {
   try {
     const { exerciseId } = req.params;
+    const { user_id } = req.query;
     const q = await pool.query(
       `SELECT l.date,
               MAX(CASE WHEN ls.reps IS NOT NULL AND ls.weight IS NOT NULL
                        THEN ls.weight * (1 + ls.reps/30.0) END) AS est_1rm
        FROM logs l
        JOIN log_sets ls ON l.id = ls.log_id
-       WHERE ls.exercise_id=$1
+       WHERE ls.exercise_id=$1 AND ($2::int IS NULL OR l.user_id = $2::int)
        GROUP BY l.date
        ORDER BY l.date ASC`, [exerciseId]);
     res.json(q.rows);
@@ -162,19 +261,42 @@ app.get('/api/progress/strength/:exerciseId', async (req, res) => {
 // Aggregated progress for running (e.g., total minutes per week)
 app.get('/api/progress/running/weekly', async (req, res) => {
   try {
+    const { user_id } = req.query;
     const q = await pool.query(
       `SELECT date_trunc('week', l.date) AS week,
               SUM(ls.duration_sec)/60.0 AS minutes
        FROM logs l
        JOIN log_sets ls ON l.id = ls.log_id
-       WHERE ls.duration_sec IS NOT NULL
+       WHERE ls.duration_sec IS NOT NULL AND ($1::int IS NULL OR l.user_id = $1::int)
        GROUP BY 1
-       ORDER BY 1 ASC`
+       ORDER BY 1 ASC`,
+      [user_id || null]
     );
     res.json(q.rows);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to compute weekly running' });
+  }
+});
+
+// Last set for a user & exercise (prefill assistance)
+app.get('/api/last-set', async (req, res) => {
+  try {
+    const { user_id, exercise_id } = req.query;
+    if (!exercise_id) return res.status(400).json({ error: 'exercise_id required' });
+    const q = await pool.query(
+      `SELECT ls.*
+       FROM log_sets ls
+       JOIN logs l ON l.id = ls.log_id
+       WHERE ls.exercise_id = $1 AND ($2::int IS NULL OR l.user_id = $2::int)
+       ORDER BY l.date DESC, l.id DESC, ls.set_number DESC
+       LIMIT 1`,
+      [exercise_id, user_id || null]
+    );
+    res.json(q.rows[0] || null);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to get last set' });
   }
 });
 

@@ -5,12 +5,14 @@ const QUEUE_KEY = 'queuedSets';
 function readQueue(){ try { return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')||[] } catch { return [] } }
 function writeQueue(arr){ localStorage.setItem(QUEUE_KEY, JSON.stringify(arr)); }
 
-export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetAdded, onEnsureLog }){
+export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetAdded, onEnsureLog, userId }){
   const [exercises, setExercises] = useState([]);
   const [logId, setLogId] = useState(initialLogId || null);
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef(null);
   const [savedExIds, setSavedExIds] = useState(() => new Set());
+  const [restSec, setRestSec] = useState(90);
+  const [timer, setTimer] = useState(0);
   
 
   useEffect(() => { setLogId(initialLogId || null); }, [initialLogId]);
@@ -105,32 +107,19 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
 
   return (
     <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.25)', zIndex:50}}>
-      <div className="card" style={{position:'absolute', left:0, right:0, bottom:0, borderTopLeftRadius:20, borderTopRightRadius:20, padding:12, background:'#fff', maxHeight:'88vh', overflow:'auto', maxWidth:680, margin:'0 auto'}}>
-        <div className="row" style={{justifyContent:'space-between', alignItems:'center'}}>
-          <div className="row" style={{gap:10}}>
-            {letters.map((ch, i) => (
-              <button
-                key={i}
-                className={'pill'}
-                aria-pressed={i===activeIndex}
-                style={{
-                  background: i===activeIndex ? 'rgba(14,124,102,0.15)' : 'var(--chip)',
-                  display:'inline-flex', alignItems:'center', justifyContent:'center',
-                  minWidth:36, minHeight:36, padding:'0 10px',
-                  fontSize:13, fontWeight:700, letterSpacing:'0.02em'
-                }}
-                onClick={()=>{
-                  setActiveIndex(i);
-                  const el = document.getElementById('ex-'+i);
-                  if (el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'});
-                }}
-              >{ch}</button>
-            ))}
-          </div>
-          <button className="btn" onClick={onClose} style={{minWidth:88}}>Close</button>
+      <div className="card workout-modal" style={{position:'absolute', left:0, right:0, bottom:0, borderTopLeftRadius:20, borderTopRightRadius:20, padding:12, background:'#fff'}}>
+        {/* Top bar with chips, progress, rest timer and Finish */}
+        <div className="row topbar" style={{justifyContent:'flex-start', alignItems:'center', gap:8}}>
+          <div className="pill" style={{padding:'4px 8px', fontSize:12}}>{formatMMSS(timer)}</div>
+          <button className="btn" onClick={()=>setTimer(restSec)} style={{minWidth:64}}>Rest</button>
+          <button className="btn" onClick={onClose} style={{minWidth:88}}>Finish</button>
+        </div>
+        {/* subtle progress */}
+        <div style={{height:6, background:'#eef2f7', borderRadius:9999, marginTop:8}}>
+          <div style={{height:'100%', width: `${progressPct(exercises, savedExIds)}%`, background:'linear-gradient(90deg, var(--brand), #12b886)', transition:'width .2s'}}></div>
         </div>
 
-        <div ref={listRef} style={{marginTop:8, maxHeight:'72vh', overflow:'auto', paddingRight:4}}>
+        <div ref={listRef} className="sheet-body" style={{marginTop:8, paddingRight:4}}>
           {exercises.map((ex, i) => (
             <div key={ex.id} id={'ex-'+i} className="card" style={{marginBottom:10, background:'#fafafa'}}>
               <div className="row" style={{justifyContent:'space-between', alignItems:'center'}}>
@@ -144,6 +133,7 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
               </div>
               <SetTable
                 exercise={ex}
+                userId={userId}
                 onSaveRows={(rows)=>saveExercise(ex, rows)}
               />
             </div>
@@ -154,10 +144,27 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
   )
 }
 
-function SetTable({ exercise, onSaveRows }){
+function SetTable({ exercise, onSaveRows, userId }){
   const [rows, setRows] = useState([{},{},{},{}]);
   const [saved, setSaved] = useState({}); // {rowIndex: true}
   const isRun = exercise.modality === 'run';
+  // Prefill from last set (user scoped)
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      PlanApi.getLastSet(exercise.id, userId),
+      PlanApi.getRecentSets(exercise.id, userId, 2)
+    ]).then(([last, recent]) => {
+      if (!mounted) return;
+      if (last) setRows(prev => prev.map((r, i) => i===0 ? prefillFrom(last, r, isRun) : r));
+      // compute suggestion
+      if (recent && recent.length) {
+        const hint = computeSuggestion(recent, isRun);
+        if (hint) setRows(prev => prev.map((r, i) => i===0 ? { ...r, _suggest: hint } : r));
+      }
+    }).catch(()=>{});
+    return () => { mounted = false; }
+  }, [exercise.id, userId, isRun]);
   function update(i, patch){
     setRows(prev => {
       const next = prev.map((r, idx) => idx===i ? { ...r, ...patch } : r);
@@ -168,26 +175,86 @@ function SetTable({ exercise, onSaveRows }){
     <div style={{marginTop:8}}>
       {rows.map((r, i) => {
         const has = !!(r.weight||r.reps||r.rpe||r.distance_m||r.duration_sec||r.notes);
+        const hint = i===0 ? rows[0]._suggest : null;
         return (
           <div key={i} className="row" style={{gap:8, alignItems:'center', marginBottom:8, flexWrap: isRun ? 'nowrap' : 'wrap'}}>
             <div style={{width:36, flex:'0 0 auto'}}>#{i+1}</div>
-            {!isRun && <input className="soft-input" style={{flex:'1 1 0', minWidth:78}} placeholder="Weight (kg)" value={r.weight||''} onChange={e=>update(i, {weight: e.target.value ? Number(e.target.value) : null})} />}
+            {!isRun && <div style={{display:'flex', alignItems:'center', gap:6, flex:'1 1 0', minWidth:120}}>
+              <input className="soft-input" style={{flex:'1 1 0', minWidth:78}} placeholder="Weight (kg)" value={r.weight||''} onChange={e=>update(i, {weight: e.target.value ? Number(e.target.value) : null})} />
+              {hint?.type==='strength' && hint?.deltaKg ? <small className="muted">Try {formatKg((Number(r.weight)||0)+hint.deltaKg)} (+{hint.deltaKg})</small> : null}
+            </div>}
             {!isRun && <input className="soft-input" style={{flex:'1 1 0', minWidth:78}} placeholder="Reps" value={r.reps||''} onChange={e=>update(i, {reps: e.target.value ? Number(e.target.value) : null})} />}
             <input className="soft-input" style={{flex:'1 1 0', minWidth:78}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
-            {isRun && <input className="soft-input" style={{width:78}} placeholder="Distance (m)" value={r.distance_m||''} onChange={e=>update(i, {distance_m: e.target.value ? Number(e.target.value) : null})} />}
+            {isRun && <div style={{display:'flex', alignItems:'center', gap:6}}>
+              <input className="soft-input" style={{width:100}} placeholder="Distance (m)" value={r.distance_m||''} onChange={e=>update(i, {distance_m: e.target.value ? Number(e.target.value) : null})} />
+              {hint?.type==='run' && hint?.pct ? <small className="muted">Try {Math.round((Number(r.distance_m)||0) * (1+hint.pct))}m ({Math.round(hint.pct*100)}%)</small> : null}
+            </div>}
             {isRun && <input className="soft-input" style={{width:78}} placeholder="Duration (sec)" value={r.duration_sec||''} onChange={e=>update(i, {duration_sec: e.target.value ? Number(e.target.value) : null})} />}
             <div style={{marginLeft:8, flex:'0 0 20px', textAlign:'right'}}>{has ? '✓' : ''}</div>
           </div>
         )
       })}
-      <div className="row" style={{gap:8, marginTop:8}}>
+      <div className="row workout-actions" style={{gap:8, marginTop:8}}>
         <button className="btn" onClick={()=>setRows(prev => [...prev, {}])} style={{minWidth:96}}>Add set</button>
         <button className="btn" onClick={()=>setRows(prev => prev.length > 1 ? prev.slice(0,-1) : prev)} style={{minWidth:96}}>Remove set</button>
-        <div style={{flex:1}} />
         <button className="btn" onClick={()=>onSaveRows(rows)} style={{minWidth:120}}>Save exercise</button>
+        <button className="btn" onClick={()=>onSaveRows(rows)} style={{minWidth:120}}>Amend</button>
       </div>
     </div>
   )
+}
+
+function prefillFrom(last, row, isRun){
+  const r = { ...row };
+  if (isRun) {
+    r.distance_m = last.distance_m ?? r.distance_m;
+    r.duration_sec = last.duration_sec ?? r.duration_sec;
+    r.rpe = last.rpe ?? r.rpe;
+  } else {
+    r.weight = last.weight ?? r.weight;
+    r.reps = last.reps ?? r.reps;
+    r.rpe = last.rpe ?? r.rpe;
+  }
+  return r;
+}
+
+function progressPct(exercises, savedExIds){
+  if (!exercises?.length) return 0;
+  const n = exercises.length;
+  const saved = Array.from(savedExIds || []).length;
+  return Math.round((saved / n) * 100);
+}
+
+function formatMMSS(s){
+  const x = Math.max(0, Number(s||0));
+  const m = Math.floor(x/60); const ss = x%60;
+  return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+
+function computeSuggestion(recent, isRun){
+  // recent is array sorted desc by date; use up to 2 items
+  const a = recent[0];
+  const b = recent[1];
+  if (!a) return null;
+  if (!isRun) {
+    // strength logic
+    const hitTarget = (r) => (r.reps != null && r.reps >= 5); // simple heuristic; can be tuned per exercise later
+    const avgRpe = b ? ((Number(a.rpe||0)+Number(b.rpe||0))/2) : Number(a.rpe||0);
+    if (hitTarget(a) && (!b || hitTarget(b)) && avgRpe && avgRpe <= 8) return { type:'strength', deltaKg: 2.5 };
+    if ((a.rpe && a.rpe >= 9 && a.reps && a.reps < 5) || (b && b.rpe && b.rpe >= 9 && b.reps && b.reps < 5)) return { type:'strength', deltaKg: -2.5 };
+    return null;
+  }
+  // run logic
+  if (a.rpe != null) {
+    if (a.rpe <= 7) return { type:'run', pct: 0.05 };
+    if (a.rpe >= 9) return { type:'run', pct: -0.05 };
+  }
+  return null;
+}
+
+function formatKg(v){
+  const n = Number(v||0);
+  return (Math.round(n*10)/10).toFixed(1) + 'kg';
 }
 
 

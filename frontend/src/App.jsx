@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { apiGet, PlanApi } from './services/api'
 import ProgressChart from './components/ProgressChart.jsx'
 import TopTools from './components/TopTools.jsx'
+import UserSwitcher, { getCurrentUserId } from './components/UserSwitcher.jsx'
 import DayCard from './components/DayCard.jsx'
 import WorkoutSheet from './components/WorkoutSheet.jsx'
 
@@ -17,6 +18,8 @@ export default function App() {
   const [weekOffset, setWeekOffset] = useState(0); // 0=this week, +1 next, -1 prev
   const [hasExercisesByDayId, setHasExercisesByDayId] = useState({});
   const [completedByDayId, setCompletedByDayId] = useState({});
+  const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
+  const [dateByDayId, setDateByDayId] = useState({}); // { [plan_day_id]: 'YYYY-MM-DD' }
 
   useEffect(() => {
     async function run() {
@@ -31,7 +34,7 @@ export default function App() {
         }
         setPlan(planData);
         setDays(ordered);
-        if (planData?.id) refreshMetrics(planData.id);
+        if (planData?.id) refreshMetrics(planData.id, currentUserId);
         // Prefetch exercise counts for Open button visibility
         Promise.all((ordered||[]).map(d => apiGet(`/api/plan-days/${d.id}/exercises`).then(exs => [d.id, Array.isArray(exs) && exs.length>0]).catch(()=>[d.id,false])))
           .then(entries => {
@@ -45,7 +48,7 @@ export default function App() {
       }
     }
     run();
-  }, []);
+  }, [currentUserId]);
 
   function sameIds(ids, arr){
     const set = new Set((arr||[]).map(d => d.id));
@@ -54,8 +57,8 @@ export default function App() {
   function readWeekOrder(){ try { return JSON.parse(localStorage.getItem('weekOrder')||'null'); } catch { return null } }
   function writeWeekOrder(ids){ localStorage.setItem('weekOrder', JSON.stringify(ids)); }
 
-  async function refreshMetrics(planId){
-    try { const m = await PlanApi.getLogsSummary(planId); setMetricsByDayId(m || {}); } catch {}
+  async function refreshMetrics(planId, userId){
+    try { const m = await PlanApi.getLogsSummary(planId, userId); setMetricsByDayId(m || {}); } catch {}
   }
 
   async function onDropReorder(e, toIndex){
@@ -123,7 +126,7 @@ export default function App() {
   }
   function currentWeekKey(){
     const d = weekMondayDate(weekOffset);
-    return 'completed:' + d.toISOString().slice(0,10);
+    return `completed:${currentUserId}:${d.toISOString().slice(0,10)}`;
   }
 
   useEffect(() => {
@@ -132,6 +135,21 @@ export default function App() {
       const raw = localStorage.getItem(currentWeekKey());
       setCompletedByDayId(raw ? JSON.parse(raw) || {} : {});
     } catch { setCompletedByDayId({}); }
+    // Also load calendar dates for this week
+    (async () => {
+      try {
+        const monday = weekMondayDate(weekOffset);
+        const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+        const from = monday.toISOString().slice(0,10);
+        const to = sunday.toISOString().slice(0,10);
+        const { PlanApi } = await import('./services/api');
+        const rows = await PlanApi.getCalendar({ from, to });
+        const map = {}; rows.forEach(r => { map[r.plan_day_id] = r.scheduled_date; });
+        setDateByDayId(map);
+      } catch {
+        setDateByDayId({});
+      }
+    })();
   }, [weekOffset, days.length]);
 
   function toggleCompleted(dayId){
@@ -152,11 +170,8 @@ export default function App() {
 
   return (
     <div className="wrap">
-      <div className="row" style={{justifyContent:'space-between', alignItems:'flex-start', gap:12, margin:'12px 0'}}>
-        <div>
-          <div style={{fontWeight:800, letterSpacing:'0.02em'}}>J Faye 247</div>
-          <div className="muted" style={{fontStyle:'italic', fontSize:12, marginTop:2}}>Your Body Is an Instrument, Not an Ornament.</div>
-        </div>
+      <div className="row" style={{justifyContent:'space-between', alignItems:'center', gap:12, margin:'12px 0'}}>
+        <UserSwitcher currentUserId={currentUserId} onChange={(id)=>{ setCurrentUserId(id); }} />
         <div className="row" style={{gap:8, alignItems:'center'}}>
           <button className="btn" aria-label="Previous week" onClick={()=>setWeekOffset(o=>o-1)} style={{minWidth:44, minHeight:32}}>‹</button>
           <span className="pill" style={{padding:'4px 8px', fontSize:12}}>{weekLabel(weekOffset)}</span>
@@ -176,7 +191,12 @@ export default function App() {
           const display = (rearrange || weekOffset !== 0)
             ? enriched
             : [...enriched.slice(todayIdx), ...enriched.slice(0, todayIdx)];
-          return display.map(({ day, weekIndex }) => (
+          const monday = weekMondayDate(weekOffset);
+          return display.map(({ day, weekIndex }, i2) => {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i2);
+            const dateISO = d.toISOString().slice(0,10);
+            return (
             <DayCard
               key={day.id}
               day={day}
@@ -188,10 +208,12 @@ export default function App() {
               draggableProps={dragProps(weekIndex)}
               isToday={weekOffset === 0 && isTodayIndex() === weekIndex}
               hasExercises={!!hasExercisesByDayId[day.id]}
+              dateISO={dateISO}
               completed={Boolean(completedByDayId[day.id] || (metricsByDayId?.[day.id]?.sets > 0))}
               onToggleComplete={() => toggleCompleted(day.id)}
             />
-          ));
+          );
+          });
         })()}
       </div>
 
@@ -204,15 +226,16 @@ export default function App() {
           day={sheetForDay}
           logId={activeLogByDayId[sheetForDay.id]}
           onClose={()=>setSheetForDay(null)}
+          userId={currentUserId}
           onEnsureLog={async ()=>{
             // Use the selected week and the index of the open day
             const i = days.findIndex(d => d.id === sheetForDay.id);
             const dateISO = dateForWeekDay(Math.max(0, i));
-            const log = await PlanApi.startLog(sheetForDay.id, dateISO);
+            const log = await PlanApi.startLog(sheetForDay.id, dateISO, currentUserId);
             setActiveLogByDayId(prev => ({ ...prev, [sheetForDay.id]: log.id }));
             return log.id;
           }}
-          onSetAdded={()=>{ plan?.id && refreshMetrics(plan.id); }}
+          onSetAdded={()=>{ plan?.id && refreshMetrics(plan.id, currentUserId); }}
         />
       )}
     </div>
@@ -223,3 +246,5 @@ function isTodayIndex(){
   const d = new Date();
   return (d.getDay() + 6) % 7; // Monday=0
 }
+
+// (WeekDates removed; dates are now shown per DayCard)

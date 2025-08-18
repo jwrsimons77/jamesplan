@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function DayCard({ day, index, rearrange, onOpen, metrics, draggableProps, isToday, hasExercises, completed, onToggleComplete }) {
+export default function DayCard({ day, index, rearrange, onOpen, metrics, draggableProps, isToday, hasExercises, completed, onToggleComplete, dateISO }) {
   const dragHandle = rearrange ? (
     <span {...(draggableProps?.handleProps||{})} aria-hidden style={{cursor:'grab', userSelect:'none', marginRight:8}}>⠿</span>
   ) : null;
@@ -13,6 +13,7 @@ export default function DayCard({ day, index, rearrange, onOpen, metrics, dragga
           <div>
             <strong>{index+1}. {day?.name || '—'}</strong><br/>
             <small className="muted">{day?.focus || ''}</small>
+            {dateISO && <div className="muted" style={{fontSize:12, marginTop:2}}>{new Date(dateISO).toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' })}</div>}
             {isToday && (
               <div style={{marginTop:4}}>
                 <button className="pill" onClick={() => onOpen(day)} style={{padding:'2px 8px', fontSize:12}}>Today</button>

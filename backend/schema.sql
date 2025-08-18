@@ -53,3 +53,14 @@ CREATE INDEX IF NOT EXISTS idx_logsets_ex ON log_sets(exercise_id);
 -- Ordering support for plan days
 ALTER TABLE plan_days ADD COLUMN IF NOT EXISTS position INTEGER;
 UPDATE plan_days SET position = day_number WHERE position IS NULL;
+
+-- Users for per-user logs and settings
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT now()
+);
+
+-- Scope logs to users (nullable to keep compatibility)
+ALTER TABLE logs ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_logs_user ON logs(user_id);
