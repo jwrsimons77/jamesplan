@@ -202,9 +202,11 @@
       .row { display:flex; align-items:center; gap:8px; }
       .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
       .btn { border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:#fff; font-weight:600; min-height:44px; }
-      .btn { color: var(--ink); }
-      .btn:active, .btn:hover, .btn:focus { color: var(--ink); background: #fff; border-color: var(--line); }
-      a { color: var(--ink); text-decoration: none; }
+      .btn { color: var(--ink) !important; cursor: pointer; }
+      .btn * { color: inherit !important; }
+      .btn:active, .btn:hover, .btn:focus { color: var(--ink) !important; background: #fff; border-color: var(--line); }
+      .pill, .pill * { color: var(--ink) !important; }
+      a { color: var(--ink) !important; text-decoration: none; }
 
       /* Workout modal responsive layout */
       .workout-modal { width: min(680px, 100vw); margin: 0 auto; max-height: calc(100svh - 8px); padding-bottom: env(safe-area-inset-bottom); background: var(--surface); }
