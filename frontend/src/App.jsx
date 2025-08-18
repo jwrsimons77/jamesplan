@@ -21,6 +21,35 @@ export default function App() {
   const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
   const [dateByDayId, setDateByDayId] = useState({}); // { [plan_day_id]: 'YYYY-MM-DD' }
 
+  // iOS visual viewport helper for dynamic viewport height
+  useEffect(() => {
+    const setVvh = () => {
+      const h = (window.visualViewport?.height || window.innerHeight);
+      document.documentElement.style.setProperty('--vvh', `${h}px`);
+    };
+    setVvh();
+    window.visualViewport?.addEventListener('resize', setVvh);
+    window.visualViewport?.addEventListener('scroll', setVvh);
+    window.addEventListener('orientationchange', setVvh);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', setVvh);
+      window.visualViewport?.removeEventListener('scroll', setVvh);
+      window.removeEventListener('orientationchange', setVvh);
+    };
+  }, []);
+
+  // Form focus behavior for iOS keyboard handling
+  useEffect(() => {
+    const handler = (e) => {
+      const el = e.target;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) {
+        setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 50);
+      }
+    };
+    document.addEventListener('focusin', handler);
+    return () => document.removeEventListener('focusin', handler);
+  }, []);
+
   useEffect(() => {
     async function run() {
       try {
