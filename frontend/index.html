@@ -486,6 +486,53 @@
           count++;
           if (count > 30) clearInterval(interval);
         }, 100);
+        
+        // MOBILE MODAL FIX: Force correct modal layout on iOS Safari
+        function forceMobileModal() {
+          if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            const modals = document.querySelectorAll('.workout-modal');
+            modals.forEach(modal => {
+              // Force mobile modal positioning
+              modal.style.setProperty('position', 'absolute', 'important');
+              modal.style.setProperty('left', '0', 'important');
+              modal.style.setProperty('right', '0', 'important');
+              modal.style.setProperty('bottom', '0', 'important');
+              modal.style.setProperty('width', '100vw', 'important');
+              modal.style.setProperty('max-height', 'calc(100vh - 20px)', 'important');
+              modal.style.setProperty('border-top-left-radius', '16px', 'important');
+              modal.style.setProperty('border-top-right-radius', '16px', 'important');
+              modal.style.setProperty('transform', 'none', 'important');
+              modal.style.setProperty('margin', '0', 'important');
+              
+              // Fix sheet body scrolling
+              const sheetBody = modal.querySelector('.sheet-body');
+              if (sheetBody) {
+                sheetBody.style.setProperty('height', 'calc(85vh - 60px)', 'important');
+                sheetBody.style.setProperty('overflow-y', 'auto', 'important');
+                sheetBody.style.setProperty('padding', '0 8px 20px 8px', 'important');
+                sheetBody.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+              }
+              
+              // Fix topbar
+              const topbar = modal.querySelector('.topbar');
+              if (topbar) {
+                topbar.style.setProperty('padding', '8px 12px', 'important');
+                topbar.style.setProperty('border-bottom', '1px solid #e5e7eb', 'important');
+              }
+            });
+          }
+        }
+        
+        // Run mobile modal fix with the same frequency
+        const modalInterval = setInterval(() => {
+          forceMobileModal();
+          count++;
+          if (count > 30) clearInterval(modalInterval);
+        }, 100);
+        
+        // Also run on DOM changes
+        const modalObserver = new MutationObserver(forceMobileModal);
+        modalObserver.observe(document.body, { childList: true, subtree: true });
       })();
     </script>
     <!-- Legacy static header retained but hidden by CSS to avoid layout flash -->
