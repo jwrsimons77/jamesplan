@@ -582,15 +582,15 @@
           if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
             const modals = document.querySelectorAll('.workout-modal');
             modals.forEach(modal => {
-              // Use fixed dimensions based on initial screen size, not dynamic viewport
-              const screenHeight = window.screen.height;
-              const modalHeight = Math.min(screenHeight * 0.85, 600); // max 600px or 85% of screen
+              // Use current viewport height but make it stable
+              const currentVH = window.visualViewport?.height || window.innerHeight;
+              const modalHeight = Math.max(currentVH * 0.9, 500); // at least 500px, or 90% of current viewport
               
               // Force static modal positioning that doesn't change with keyboard
               modal.style.setProperty('position', 'fixed', 'important');
               modal.style.setProperty('left', '0', 'important');
               modal.style.setProperty('right', '0', 'important');
-              modal.style.setProperty('top', `${screenHeight - modalHeight}px`, 'important');
+              modal.style.setProperty('bottom', '0', 'important');
               modal.style.setProperty('width', '100vw', 'important');
               modal.style.setProperty('height', `${modalHeight}px`, 'important');
               modal.style.setProperty('max-height', `${modalHeight}px`, 'important');
@@ -601,21 +601,19 @@
               modal.style.setProperty('z-index', '50', 'important');
               modal.style.setProperty('overflow', 'hidden', 'important');
               
-              // Fix sheet body with static height that doesn't change
+              // Fix sheet body with generous height
               const sheetBody = modal.querySelector('.sheet-body');
               if (sheetBody) {
-                const bodyHeight = modalHeight - 80; // leave room for header
+                const bodyHeight = modalHeight - 70; // leave room for header
                 sheetBody.style.setProperty('height', `${bodyHeight}px`, 'important');
                 sheetBody.style.setProperty('max-height', `${bodyHeight}px`, 'important');
                 sheetBody.style.setProperty('overflow-y', 'auto', 'important');
-                sheetBody.style.setProperty('padding', '8px', 'important');
+                sheetBody.style.setProperty('padding', '8px 8px 40px 8px', 'important');
                 sheetBody.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
                 sheetBody.style.setProperty('min-height', '0', 'important');
-                // Prevent any layout jumping
-                sheetBody.style.setProperty('position', 'relative', 'important');
               }
               
-              // Fix topbar with static positioning
+              // Fix topbar 
               const topbar = modal.querySelector('.topbar');
               if (topbar) {
                 topbar.style.setProperty('padding', '12px', 'important');
@@ -624,7 +622,6 @@
                 topbar.style.setProperty('position', 'sticky', 'important');
                 topbar.style.setProperty('top', '0', 'important');
                 topbar.style.setProperty('z-index', '2', 'important');
-                topbar.style.setProperty('height', '60px', 'important');
                 topbar.style.setProperty('flex-shrink', '0', 'important');
               }
             });
@@ -669,15 +666,26 @@
         window.visualViewport?.addEventListener('resize', setVvh);
         window.addEventListener('orientationchange', setVvh);
         
-        // Enhanced form focus behavior for static modal
+        // Enhanced form focus behavior - only use static mode when keyboard might interfere
+        let keyboardMightBeOpen = false;
+        
         document.addEventListener('focusin', (e) => {
           const el = e.target;
           if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) {
-            // Ensure static modal is applied when focusing inputs
-            forceMobileModalStatic();
             
-            // On iOS, scroll the input into the visible area of the modal
+            // Wait a bit to see if keyboard actually opens (viewport change)
             setTimeout(() => {
+              const currentVH = window.visualViewport?.height || window.innerHeight;
+              const fullHeight = window.screen.height;
+              const keyboardIsOpen = (fullHeight - currentVH) > 150;
+              
+              if (keyboardIsOpen && !keyboardMightBeOpen) {
+                // Keyboard just opened, switch to static mode
+                keyboardMightBeOpen = true;
+                forceMobileModalStatic();
+              }
+              
+              // Scroll the input into view within the modal
               const modal = el.closest('.workout-modal');
               const sheetBody = modal?.querySelector('.sheet-body');
               
@@ -696,18 +704,24 @@
                 // Fallback for other cases
                 el.scrollIntoView({ block: 'center', behavior: 'smooth' });
               }
-            }, 100);
+            }, 300);
           }
         });
 
-        // Prevent modal from changing size when keyboard shows/hides
+        // Reset when no inputs are focused
         document.addEventListener('focusout', (e) => {
-          // Small delay to ensure keyboard state has changed
           setTimeout(() => {
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-              forceMobileModalStatic();
+            const activeEl = document.activeElement;
+            const isInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+            
+            if (!isInputFocused) {
+              keyboardMightBeOpen = false;
+              // Return to normal modal sizing
+              if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                forceMobileModal();
+              }
             }
-          }, 200);
+          }, 300);
         });
       })();
     </script>
