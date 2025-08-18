@@ -12,4 +12,10 @@
   to = "/index.html"
   status = 200
 
+# Temporary: force fresh HTML/CSS on mobile until CDN cache stabilizes
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
 
