@@ -266,6 +266,72 @@
         accent-color: #0e7c66; 
       }
 
+      /* AGGRESSIVE iOS Safari blue overrides */
+      button, input[type="button"], input[type="submit"], input[type="reset"] {
+        color: var(--ink) !important;
+        background: #fff !important;
+        border: 1px solid var(--line) !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+      }
+      
+      button:hover, button:focus, button:active {
+        color: var(--ink) !important;
+        background: #fff !important;
+      }
+
+      /* Force all React button elements to override iOS blue */
+      div[role="button"], 
+      span[role="button"],
+      [onClick] {
+        color: var(--ink) !important;
+      }
+
+      /* Specifically target the blue buttons in your screenshots */
+      .btn, 
+      button.btn,
+      [class*="btn"] {
+        color: var(--ink) !important;
+        background: #fff !important;
+        border-color: var(--line) !important;
+      }
+
+      /* iOS WebKit specific overrides */
+      @supports (-webkit-touch-callout: none) {
+        button, 
+        input[type="button"], 
+        input[type="submit"], 
+        [role="button"] {
+          color: var(--ink) !important;
+          background: #fff !important;
+          -webkit-appearance: none !important;
+          -webkit-tap-highlight-color: transparent !important;
+        }
+      }
+
+      /* Nuclear option: force ALL elements to use ink color on iOS */
+      .ios * {
+        color: var(--ink) !important;
+      }
+      .ios button, .ios .btn {
+        color: var(--ink) !important;
+        background: #fff !important;
+      }
+
+      /* Target user switcher and specific UI elements */
+      [aria-label*="Rest"], 
+      [aria-label*="Finish"],
+      button:contains("Rest"),
+      button:contains("Finish"),
+      button:contains("Add set"),
+      button:contains("Remove set"),
+      button:contains("Save exercise"),
+      button:contains("Amend") {
+        color: var(--ink) !important;
+        background: #fff !important;
+        border: 1px solid var(--line) !important;
+      }
+
       /* Workout modal responsive layout */
       .workout-modal { width: min(680px, 100vw); margin: 0 auto; max-height: calc(100svh - 8px); padding-bottom: env(safe-area-inset-bottom); background: var(--surface); }
       .workout-modal .topbar { position: sticky; top: 0; background: var(--surface); z-index: 2; padding-top: env(safe-area-inset-top); padding-bottom: 6px; }
