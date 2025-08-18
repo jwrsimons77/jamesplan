@@ -332,6 +332,44 @@
         border: 1px solid var(--line) !important;
       }
 
+      /* FINAL NUCLEAR OPTION: Force override ALL possible blue sources on iOS */
+      html, body, *, *:before, *:after {
+        -webkit-user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+      }
+
+      /* Reset ALL possible iOS link/button styling */
+      * {
+        color: inherit !important;
+        text-decoration: none !important;
+      }
+
+      /* Force every single button to be ink colored */
+      button, 
+      input[type="button"], 
+      input[type="submit"], 
+      input[type="reset"],
+      [role="button"],
+      .btn,
+      a {
+        color: #111827 !important;
+        background: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        text-decoration: none !important;
+      }
+
+      /* Disable ALL possible iOS auto-styling */
+      input, textarea, select, button {
+        -webkit-user-modify: read-write-plaintext-only !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        color: #111827 !important;
+        background: #ffffff !important;
+      }
+
       /* Workout modal responsive layout */
       .workout-modal { width: min(680px, 100vw); margin: 0 auto; max-height: calc(100svh - 8px); padding-bottom: env(safe-area-inset-bottom); background: var(--surface); }
       .workout-modal .topbar { position: sticky; top: 0; background: var(--surface); z-index: 2; padding-top: env(safe-area-inset-top); padding-bottom: 6px; }
@@ -357,6 +395,44 @@
   <body class="min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Emergency iOS Safari blue override script -->
+    <script>
+      (function() {
+        // Force remove blue styling on iOS Safari
+        function forceNoBlue() {
+          if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            const elements = document.querySelectorAll('button, a, input[type="button"], input[type="submit"], [role="button"], .btn');
+            elements.forEach(el => {
+              el.style.setProperty('color', '#111827', 'important');
+              el.style.setProperty('background', '#ffffff', 'important');
+              el.style.setProperty('border', '1px solid #e5e7eb', 'important');
+              el.style.setProperty('-webkit-appearance', 'none', 'important');
+              el.style.setProperty('appearance', 'none', 'important');
+              el.style.setProperty('text-decoration', 'none', 'important');
+            });
+          }
+        }
+        
+        // Run immediately and on DOM changes
+        forceNoBlue();
+        
+        // Watch for dynamic content changes
+        const observer = new MutationObserver(forceNoBlue);
+        observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Also run on page visibility change
+        document.addEventListener('visibilitychange', forceNoBlue);
+        
+        // Run every 100ms for first 3 seconds to catch React renders
+        let count = 0;
+        const interval = setInterval(() => {
+          forceNoBlue();
+          count++;
+          if (count > 30) clearInterval(interval);
+        }, 100);
+      })();
+    </script>
     <!-- Legacy static header retained but hidden by CSS to avoid layout flash -->
     <header class="glass-header">
       <div class="container mx-auto px-4 py-3 flex items-center justify-between">
