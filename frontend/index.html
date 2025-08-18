@@ -530,37 +530,48 @@
           if (count > 30) clearInterval(interval);
         }, 100);
         
-        // MOBILE MODAL FIX: Force correct modal layout on iOS Safari
+        // MOBILE MODAL FIX: Force correct modal layout on iOS Safari using new viewport system
         function forceMobileModal() {
           if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
             const modals = document.querySelectorAll('.workout-modal');
             modals.forEach(modal => {
-              // Force mobile modal positioning
-              modal.style.setProperty('position', 'absolute', 'important');
+              // Get current visual viewport height
+              const vvh = window.visualViewport?.height || window.innerHeight;
+              
+              // Force mobile modal positioning with proper viewport handling
+              modal.style.setProperty('position', 'fixed', 'important');
               modal.style.setProperty('left', '0', 'important');
               modal.style.setProperty('right', '0', 'important');
               modal.style.setProperty('bottom', '0', 'important');
               modal.style.setProperty('width', '100vw', 'important');
-              modal.style.setProperty('max-height', 'calc(100vh - 20px)', 'important');
+              modal.style.setProperty('max-height', `${vvh * 0.9}px`, 'important');
               modal.style.setProperty('border-top-left-radius', '16px', 'important');
               modal.style.setProperty('border-top-right-radius', '16px', 'important');
               modal.style.setProperty('transform', 'none', 'important');
               modal.style.setProperty('margin', '0', 'important');
+              modal.style.setProperty('z-index', '50', 'important');
               
-              // Fix sheet body scrolling
+              // Fix sheet body scrolling with proper height calculation
               const sheetBody = modal.querySelector('.sheet-body');
               if (sheetBody) {
-                sheetBody.style.setProperty('height', 'calc(85vh - 60px)', 'important');
+                const bodyHeight = Math.min(vvh * 0.7, vvh - 120);
+                sheetBody.style.setProperty('height', `${bodyHeight}px`, 'important');
+                sheetBody.style.setProperty('max-height', `${bodyHeight}px`, 'important');
                 sheetBody.style.setProperty('overflow-y', 'auto', 'important');
-                sheetBody.style.setProperty('padding', '0 8px 20px 8px', 'important');
+                sheetBody.style.setProperty('padding', '8px 8px 60px 8px', 'important');
                 sheetBody.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+                sheetBody.style.setProperty('min-height', '0', 'important');
               }
               
               // Fix topbar
               const topbar = modal.querySelector('.topbar');
               if (topbar) {
-                topbar.style.setProperty('padding', '8px 12px', 'important');
+                topbar.style.setProperty('padding', '12px', 'important');
                 topbar.style.setProperty('border-bottom', '1px solid #e5e7eb', 'important');
+                topbar.style.setProperty('background', '#ffffff', 'important');
+                topbar.style.setProperty('position', 'sticky', 'important');
+                topbar.style.setProperty('top', '0', 'important');
+                topbar.style.setProperty('z-index', '2', 'important');
               }
             });
           }
@@ -581,6 +592,8 @@
         function setVvh() {
           const h = (window.visualViewport?.height || window.innerHeight);
           document.documentElement.style.setProperty('--vvh', `${h}px`);
+          // Also update modal layout when viewport changes
+          forceMobileModal();
         }
         setVvh();
         window.visualViewport?.addEventListener('resize', setVvh);
