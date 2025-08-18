@@ -654,8 +654,8 @@
           
           if (isKeyboardOpen !== wasKeyboardOpen) {
             keyboardHeight = isKeyboardOpen ? newKeyboardHeight : 0;
-            // Force modal to stay at fixed height when keyboard opens/closes
-            forceMobileModalStatic();
+            // Update modal when keyboard state changes but don't force static mode
+            forceMobileModal();
           }
           
           document.documentElement.style.setProperty('--vvh', `${h}px`);
@@ -666,26 +666,13 @@
         window.visualViewport?.addEventListener('resize', setVvh);
         window.addEventListener('orientationchange', setVvh);
         
-        // Enhanced form focus behavior - only use static mode when keyboard might interfere
-        let keyboardMightBeOpen = false;
-        
+        // Simple form focus behavior - just scroll inputs into view without changing modal size
         document.addEventListener('focusin', (e) => {
           const el = e.target;
           if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) {
             
-            // Wait a bit to see if keyboard actually opens (viewport change)
+            // Just scroll the input into view within the modal
             setTimeout(() => {
-              const currentVH = window.visualViewport?.height || window.innerHeight;
-              const fullHeight = window.screen.height;
-              const keyboardIsOpen = (fullHeight - currentVH) > 150;
-              
-              if (keyboardIsOpen && !keyboardMightBeOpen) {
-                // Keyboard just opened, switch to static mode
-                keyboardMightBeOpen = true;
-                forceMobileModalStatic();
-              }
-              
-              // Scroll the input into view within the modal
               const modal = el.closest('.workout-modal');
               const sheetBody = modal?.querySelector('.sheet-body');
               
@@ -704,24 +691,8 @@
                 // Fallback for other cases
                 el.scrollIntoView({ block: 'center', behavior: 'smooth' });
               }
-            }, 300);
+            }, 100);
           }
-        });
-
-        // Reset when no inputs are focused
-        document.addEventListener('focusout', (e) => {
-          setTimeout(() => {
-            const activeEl = document.activeElement;
-            const isInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
-            
-            if (!isInputFocused) {
-              keyboardMightBeOpen = false;
-              // Return to normal modal sizing
-              if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                forceMobileModal();
-              }
-            }
-          }, 300);
         });
       })();
     </script>
