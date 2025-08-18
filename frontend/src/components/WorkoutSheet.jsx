@@ -107,7 +107,7 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
 
   return (
     <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.25)', zIndex:50}}>
-      <div className="card workout-modal" style={{position:'absolute', left:0, right:0, bottom:0, borderTopLeftRadius:20, borderTopRightRadius:20, padding:12, background:'#fff'}}>
+      <div className="card workout-modal">
         {/* Top bar with chips, progress, rest timer and Finish */}
         <div className="row topbar" style={{justifyContent:'flex-start', alignItems:'center', gap:8}}>
           <div className="pill" style={{padding:'4px 8px', fontSize:12}}>{formatMMSS(timer)}</div>
@@ -119,7 +119,7 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
           <div style={{height:'100%', width: `${progressPct(exercises, savedExIds)}%`, background:'linear-gradient(90deg, var(--brand), #12b886)', transition:'width .2s'}}></div>
         </div>
 
-        <div ref={listRef} className="sheet-body" style={{marginTop:8, paddingRight:4}}>
+        <div ref={listRef} className="sheet-body">
           {exercises.map((ex, i) => (
             <div key={ex.id} id={'ex-'+i} className="card" style={{marginBottom:10, background:'#fafafa'}}>
               <div className="row" style={{justifyContent:'space-between', alignItems:'center'}}>
