@@ -31,9 +31,18 @@
         color:var(--ink);
         background:var(--bg);
         -webkit-tap-highlight-color: transparent;
+        -webkit-font-smoothing: antialiased;
+        height: 100%;
+        overscroll-behavior: contain;
         font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", Inter, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
         letter-spacing: -0.01em;
       }
+      html { height: 100%; }
+
+      button, input, select, textarea { -webkit-appearance: none; appearance: none; }
+      button:focus { outline: none; }
+      input:focus { outline: none; }
+      .btn:focus-visible, .soft-input:focus-visible { outline: 2px solid rgba(14,124,102,0.35); outline-offset: 2px; }
 
       /* Cards and shadows */
       .surface-card {
@@ -186,18 +195,18 @@
       .btn { border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:#fff; font-weight:600; min-height:44px; }
 
       /* Workout modal responsive layout */
-      .workout-modal { width: min(680px, 100vw); margin: 0 auto; }
+      .workout-modal { width: min(680px, 100vw); margin: 0 auto; max-height: calc(100svh - 8px); padding-bottom: env(safe-area-inset-bottom); }
       .workout-modal .topbar { position: sticky; top: 0; background: var(--surface); z-index: 2; padding-bottom: 6px; }
       .workout-modal .chip-row { display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling: touch; padding: 4px 0 4px 12px; flex: 1 1 auto; }
       .workout-modal .chip-row::-webkit-scrollbar { display:none; }
       .workout-modal .topbar-actions { display:flex; gap:8px; align-items:center; }
-      .workout-modal .sheet-body { height: calc(90vh - 56px); overflow-y: auto; }
+      .workout-modal .sheet-body { height: calc(90svh - 56px); overflow-y: auto; }
       .workout-actions { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0,1fr)); }
       .workout-actions .btn { width: 100%; }
 
       @media (max-width: 600px) {
         .workout-modal { left: 0 !important; right: 0 !important; width: 100vw !important; border-top-left-radius: 16px; border-top-right-radius: 16px; }
-        .workout-modal .sheet-body { height: calc(90vh - 56px); overflow-y: auto; padding-bottom: 12px; }
+        .workout-modal .sheet-body { height: calc(90svh - 56px); overflow-y: auto; padding-bottom: 12px; }
         .workout-modal .topbar { padding-bottom: 8px; }
         .workout-modal .topbar-actions .btn { min-width: 70px; padding: 8px 10px; }
       }
