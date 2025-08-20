@@ -11,7 +11,7 @@ export default function App() {
   const [days, setDays] = useState([]);
   const [rearrange, setRearrange] = useState(false);
   const [activeLogByDayId, setActiveLogByDayId] = useState({});
-  const [sheetForDay, setSheetForDay] = useState(null);
+  const [sheetContext, setSheetContext] = useState(null); // { day, dateISO }
   const [metricsByDayId, setMetricsByDayId] = useState({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -90,14 +90,15 @@ export default function App() {
     try { const m = await PlanApi.getLogsSummary(planId, userId); setMetricsByDayId(m || {}); } catch {}
   }
 
-  async function onDropReorder(e, toIndex){
-    e.preventDefault();
-    const fromIndex = Number(e.dataTransfer.getData('text/plain'));
-    if (Number.isNaN(fromIndex)) return;
+  async function moveDay(dayIndex, direction) {
     const arr = [...days];
-    const [m] = arr.splice(fromIndex, 1);
-    arr.splice(toIndex, 0, m);
+    const newIndex = dayIndex + direction;
+    if (newIndex < 0 || newIndex >= arr.length) return;
+    
+    const [movedDay] = arr.splice(dayIndex, 1);
+    arr.splice(newIndex, 0, movedDay);
     const ids = arr.map(d => d.id);
+    
     try {
       const resp = await PlanApi.putOrder(ids);
       const map = new Map((resp?.days||arr).map(d => [d.id, d]));
@@ -109,18 +110,7 @@ export default function App() {
     }
   }
 
-  function dragProps(i){
-    return {
-      containerProps: rearrange ? {
-        draggable: true,
-        onDragStart: (e) => e.dataTransfer.setData('text/plain', String(i)),
-        onDragOver: (e) => e.preventDefault(),
-        onDrop: (e) => onDropReorder(e, i),
-        style: { cursor:'grab' }
-      } : {},
-      handleProps: { draggable: true, onDragStart: (e) => e.dataTransfer.setData('text/plain', String(i)) }
-    }
-  }
+
 
   function dateForWeekDay(index){
     // Monday index 0 .. Sunday index 6
@@ -189,8 +179,8 @@ export default function App() {
     });
   }
 
-  // Start log button removed; logs will be ensured inside WorkoutSheet when saving first set
-  function onOpen(day){ setSheetForDay(day); }
+  // Open a workout for a specific visual date
+  function onOpen(day, dateISO){ setSheetContext({ day, dateISO }); }
 
   if (loading) return <div className="wrap">Loading…</div>;
   if (error) return <div className="wrap" style={{color:'#b91c1c'}}>{error}</div>;
@@ -199,19 +189,19 @@ export default function App() {
 
   return (
     <div className="wrap">
-      <div className="row" style={{justifyContent:'space-between', alignItems:'center', gap:12, margin:'12px 0'}}>
-        <UserSwitcher currentUserId={currentUserId} onChange={(id)=>{ setCurrentUserId(id); }} />
-        <div className="row" style={{gap:8, alignItems:'center'}}>
-          <button className="btn" aria-label="Previous week" onClick={()=>setWeekOffset(o=>o-1)} style={{minWidth:44, minHeight:32}}>‹</button>
-          <span className="pill" style={{padding:'4px 8px', fontSize:12}}>{weekLabel(weekOffset)}</span>
-          <button className="btn" aria-label="Next week" onClick={()=>setWeekOffset(o=>o+1)} style={{minWidth:44, minHeight:32}}>›</button>
-          {weekOffset !== 0 && (
-            <button className="btn" aria-label="Go to today" onClick={()=>setWeekOffset(0)} style={{minHeight:32}}>Today</button>
-          )}
+      <div style={{position:'sticky', top:0, zIndex:30, background:'var(--bg)', paddingTop:'env(safe-area-inset-top)', margin:'-12px -12px 12px -12px', padding:'12px'}}>
+        <div className="row" style={{justifyContent:'space-between', alignItems:'center', gap:12}}>
+          <UserSwitcher currentUserId={currentUserId} onChange={(id)=>{ setCurrentUserId(id); }} />
+          <div className="row" style={{gap:8, alignItems:'center'}}>
+            <button className="btn" aria-label="Previous week" onClick={()=>setWeekOffset(o=>o-1)} style={{minWidth:44, minHeight:44}}>‹</button>
+            <span className="pill" style={{padding:'4px 8px', fontSize:12}}>{weekLabel(weekOffset)}</span>
+            <button className="btn" aria-label="Next week" onClick={()=>setWeekOffset(o=>o+1)} style={{minWidth:44, minHeight:44}}>›</button>
+          </div>
+        </div>
+        <div style={{marginTop:8}}>
+          <TopTools rearrange={rearrange} setRearrange={setRearrange} weekOffset={weekOffset} setWeekOffset={setWeekOffset} />
         </div>
       </div>
-
-      <TopTools rearrange={rearrange} setRearrange={setRearrange} />
 
       <div style={{marginTop:12, display:'grid', gap:12}}>
         {(() => {
@@ -234,7 +224,10 @@ export default function App() {
               onStartLog={undefined}
               onOpen={onOpen}
               metrics={metricsByDayId?.[day.id]}
-              draggableProps={dragProps(weekIndex)}
+              onMoveUp={() => moveDay(weekIndex, -1)}
+              onMoveDown={() => moveDay(weekIndex, 1)}
+              canMoveUp={weekIndex > 0}
+              canMoveDown={weekIndex < days.length - 1}
               isToday={weekOffset === 0 && isTodayIndex() === weekIndex}
               hasExercises={!!hasExercisesByDayId[day.id]}
               dateISO={dateISO}
@@ -250,18 +243,18 @@ export default function App() {
         <ProgressChart exercise={null} />
       </div>
 
-      {sheetForDay && (
+      {sheetContext && (
         <WorkoutSheet
-          day={sheetForDay}
-          logId={activeLogByDayId[sheetForDay.id]}
-          onClose={()=>setSheetForDay(null)}
+          day={sheetContext.day}
+          selectedDateISO={sheetContext.dateISO}
+          logId={activeLogByDayId[sheetContext.day.id]}
+          onClose={()=>setSheetContext(null)}
           userId={currentUserId}
           onEnsureLog={async ()=>{
-            // Use the selected week and the index of the open day
-            const i = days.findIndex(d => d.id === sheetForDay.id);
-            const dateISO = dateForWeekDay(Math.max(0, i));
-            const log = await PlanApi.startLog(sheetForDay.id, dateISO, currentUserId);
-            setActiveLogByDayId(prev => ({ ...prev, [sheetForDay.id]: log.id }));
+            // Use the visual row's selected date to create the log
+            const dateISO = sheetContext?.dateISO || new Date().toISOString().slice(0,10);
+            const log = await PlanApi.startLog(sheetContext.day.id, dateISO, currentUserId);
+            setActiveLogByDayId(prev => ({ ...prev, [sheetContext.day.id]: log.id }));
             return log.id;
           }}
           onSetAdded={()=>{ plan?.id && refreshMetrics(plan.id, currentUserId); }}

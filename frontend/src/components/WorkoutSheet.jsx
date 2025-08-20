@@ -5,7 +5,7 @@ const QUEUE_KEY = 'queuedSets';
 function readQueue(){ try { return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')||[] } catch { return [] } }
 function writeQueue(arr){ localStorage.setItem(QUEUE_KEY, JSON.stringify(arr)); }
 
-export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetAdded, onEnsureLog, userId }){
+export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetAdded, onEnsureLog, userId, selectedDateISO }){
   const [exercises, setExercises] = useState([]);
   const [logId, setLogId] = useState(initialLogId || null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -61,8 +61,8 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
       setLogId(id);
       return id;
     }
-    const today = new Date().toISOString().slice(0,10);
-    const log = await PlanApi.startLog(day.id, today);
+    const dateISO = selectedDateISO || new Date().toISOString().slice(0,10);
+    const log = await PlanApi.startLog(day.id, dateISO, userId);
     setLogId(log.id);
     return log.id;
   }
@@ -108,11 +108,23 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
   return (
     <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.25)', zIndex:50}}>
       <div className="card workout-modal">
-        {/* Top bar with chips, progress, rest timer and Finish */}
-        <div className="row topbar" style={{justifyContent:'flex-start', alignItems:'center', gap:8}}>
-          <div className="pill" style={{padding:'4px 8px', fontSize:12}}>{formatMMSS(timer)}</div>
-          <button className="btn" onClick={()=>setTimer(restSec)} style={{minWidth:64}}>Rest</button>
-          <button className="btn" onClick={onClose} style={{minWidth:88}}>Finish</button>
+        {/* Top bar with section chips, timer and Finish */}
+        <div className="row topbar" style={{justifyContent:'space-between', alignItems:'center', gap:8}}>
+          <div className="row" style={{gap:6, overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
+            {letters.map((ch, i) => (
+              <button key={i} className="pill" style={{padding:'4px 8px', fontSize:12}} onClick={()=>{
+                const el = document.getElementById('ex-'+i);
+                el && el.scrollIntoView({ behavior:'smooth', block:'start' });
+              }} aria-label={`Jump to section ${ch}`}>
+                {ch}
+              </button>
+            ))}
+          </div>
+          <div className="row" style={{gap:8}}>
+            <div className="pill" style={{padding:'4px 8px', fontSize:12}}>{formatMMSS(timer)}</div>
+            <button className="btn" onClick={()=>setTimer(restSec)} style={{minWidth:64}} aria-label="Start rest timer">Rest</button>
+            <button className="btn" onClick={onClose} style={{minWidth:88}} aria-label="Finish workout">Finish</button>
+          </div>
         </div>
         {/* subtle progress */}
         <div style={{height:6, background:'#eef2f7', borderRadius:9999, marginTop:8}}>
@@ -121,7 +133,7 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
 
         <div ref={listRef} className="sheet-body">
           {exercises.map((ex, i) => (
-            <div key={ex.id} id={'ex-'+i} className="card" style={{marginBottom:10, background:'#fafafa'}}>
+            <div key={ex.id} id={'ex-'+i} className="card" style={{marginBottom:10, background:'var(--surface)'}}>
               <div className="row" style={{justifyContent:'space-between', alignItems:'center'}}>
                 <div>
                   <strong>{String.fromCharCode(65+i)}. {ex.name}</strong><br/>
@@ -182,7 +194,7 @@ function SetTable({ exercise, onSaveRows, userId }){
               <div style={{width:24, flex:'0 0 auto', fontSize:'12px', fontWeight:'600'}}>#{i+1}</div>
               {!isRun ? (
                 <>
-                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'16px', padding:'8px 6px'}} placeholder="Wt" value={r.weight||''} onChange={e=>update(i, {weight: e.target.value ? Number(e.target.value) : null})} />
+                  <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'16px', padding:'8px 6px'}} placeholder="Kg" value={r.weight||''} onChange={e=>update(i, {weight: e.target.value ? Number(e.target.value) : null})} />
                   <input className="soft-input" style={{flex:'2 1 0', width:'auto', minWidth:0, maxWidth:'35%', fontSize:'16px', padding:'8px 6px'}} placeholder="Reps" value={r.reps||''} onChange={e=>update(i, {reps: e.target.value ? Number(e.target.value) : null})} />
                   <input className="soft-input" style={{flex:'1 1 0', width:'auto', minWidth:0, maxWidth:'20%', fontSize:'16px', padding:'8px 4px'}} placeholder="RPE" value={r.rpe||''} onChange={e=>update(i, {rpe: e.target.value ? Number(e.target.value) : null})} />
                 </>
@@ -206,10 +218,9 @@ function SetTable({ exercise, onSaveRows, userId }){
         )
       })}
       <div className="row workout-actions" style={{gap:8, marginTop:8}}>
-        <button className="btn" onClick={()=>setRows(prev => [...prev, {}])} style={{minWidth:96}}>Add set</button>
-        <button className="btn" onClick={()=>setRows(prev => prev.length > 1 ? prev.slice(0,-1) : prev)} style={{minWidth:96}}>Remove set</button>
-        <button className="btn" onClick={()=>onSaveRows(rows)} style={{minWidth:120}}>Save exercise</button>
-        <button className="btn" onClick={()=>onSaveRows(rows)} style={{minWidth:120}}>Amend</button>
+        <button className="btn" onClick={()=>setRows(prev => [...prev, {}])} style={{minWidth:60}}>Add</button>
+        <button className="btn" onClick={()=>setRows(prev => prev.length > 1 ? prev.slice(0,-1) : prev)} style={{minWidth:70}}>Remove</button>
+        <button className="btn" onClick={()=>onSaveRows(rows)} style={{minWidth:60}}>Save</button>
       </div>
     </div>
   )
