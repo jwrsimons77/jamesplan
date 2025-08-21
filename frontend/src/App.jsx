@@ -209,6 +209,10 @@ export default function App() {
   return (
     <div className="wrap">
       <div style={{position:'sticky', top:0, zIndex:30, background:'var(--bg)', paddingTop:'env(safe-area-inset-top)', margin:'-12px -12px 12px -12px', padding:'12px'}}>
+        {/* DEBUG: Force show Aug 21st */}
+        <div style={{background:'red', color:'white', padding:'4px 8px', fontSize:12, marginBottom:8, textAlign:'center'}}>
+          DEBUG v1.0.2: FORCED DATE = 2025-08-21 (Thu) - If you see this, new code is loaded!
+        </div>
         <div className="row" style={{justifyContent:'space-between', alignItems:'center', gap:12}}>
           <UserSwitcher currentUserId={currentUserId} onChange={(id)=>{ setCurrentUserId(id); }} />
           <div className="row" style={{gap:8, alignItems:'center'}}>
