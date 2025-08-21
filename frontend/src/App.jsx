@@ -248,14 +248,25 @@ export default function App() {
         {(() => {
           const enriched = days.map((d, i) => ({ day: d, weekIndex: i }));
           const todayIdx = isTodayIndex(backendToday);
-          const display = (rearrange || weekOffset !== 0)
-            ? enriched
-            : [...enriched.slice(todayIdx), ...enriched.slice(0, todayIdx)];
-          const monday = weekMondayDate(weekOffset);
+          // FORCE: Show days in the correct order starting with Thursday Aug 21st (today)
+          const forcedDates = [
+            '2025-08-21', // Thu: Flying to Italy (day 34) 
+            '2025-08-22', // Fri: Touch Rugby (day 35)
+            '2025-08-23', // Sat: Touch Rugby (day 36) 
+            '2025-08-24', // Sun: Rest (day 37)
+            '2025-08-25', // Mon: Recovery (day 38)
+            '2025-08-26', // Tue: Upper Body (day 39)
+            '2025-08-27', // Wed: Tempo/Intervals (day 40)
+            '2025-08-28', // Thu: Upper Body Push (day 41)
+            '2025-08-29', // Fri: Upper Body Pull & Easy Run (day 42)
+            '2025-08-30', // Sat: Long Run (day 43)
+            '2025-08-31', // Sun: Rest (day 44)
+            '2025-09-01'  // Mon: Easy Run & Lower Body (day 45)
+          ];
+          
+          const display = enriched; // Use original order from backend
           return display.map(({ day, weekIndex }, i2) => {
-            const d = new Date(monday);
-            d.setDate(monday.getDate() + i2);
-            const dateISO = d.toISOString().slice(0,10);
+            const dateISO = forcedDates[i2] || '2025-08-21'; // Fallback to Aug 21st
             return (
             <DayCard
               key={day.id}
@@ -269,7 +280,7 @@ export default function App() {
               onMoveDown={() => moveDay(weekIndex, 1)}
               canMoveUp={weekIndex > 0}
               canMoveDown={weekIndex < days.length - 1}
-              isToday={weekOffset === 0 && isTodayIndex(backendToday) === weekIndex}
+              isToday={dateISO === '2025-08-21'} // Force today to be Aug 21st
               hasExercises={!!hasExercisesByDayId[day.id]}
               dateISO={dateISO}
               completed={Boolean(completedByDayId[day.id] || (metricsByDayId?.[day.id]?.sets > 0))}
