@@ -258,14 +258,22 @@ export default function App() {
 
       <div style={{marginTop:12, display:'grid', gap:12}}>
         {(() => {
-          const enriched = days.map((d, i) => ({ day: d, weekIndex: i }));
-          const todayIdx = isTodayIndex(backendToday);
-          // Calculate dates based on weekOffset from Aug 21st (Thursday) base
-          const baseDate = new Date('2025-08-21T12:00:00Z'); // Thursday Aug 21st
-          baseDate.setDate(baseDate.getDate() + (weekOffset * 7)); // Add weeks
+          let weekDays, baseDate;
           
-          const display = enriched; // Use original order from backend
-          return display.map(({ day, weekIndex }, i2) => {
+          if (weekOffset === 0) {
+            // Week 0: Italy week (Thu-Mon, 5 days) - days 34-38
+            weekDays = days.slice(0, 5); // First 5 days
+            baseDate = new Date('2025-08-21T12:00:00Z'); // Thursday Aug 21st
+          } else {
+            // Regular weeks: 7-day cycle (Tue-Mon) - days 39-45 repeating
+            const regularDays = days.slice(5); // Days 39-45 (7 days)
+            weekDays = regularDays; // Show the 7-day pattern
+            baseDate = new Date('2025-08-27T12:00:00Z'); // Tuesday Aug 27th (start of regular cycle)
+            baseDate.setDate(baseDate.getDate() + ((weekOffset - 1) * 7)); // Add weeks from week 1
+          }
+          
+          const enriched = weekDays.map((d, i) => ({ day: d, weekIndex: i }));
+          return enriched.map(({ day, weekIndex }, i2) => {
             const d = new Date(baseDate);
             d.setDate(baseDate.getDate() + i2); // Add days from base
             const dateISO = d.toISOString().slice(0,10);
@@ -281,7 +289,7 @@ export default function App() {
               onMoveUp={() => moveDay(weekIndex, -1)}
               onMoveDown={() => moveDay(weekIndex, 1)}
               canMoveUp={weekIndex > 0}
-              canMoveDown={weekIndex < days.length - 1}
+              canMoveDown={weekIndex < weekDays.length - 1}
               isToday={weekOffset === 0 && dateISO === '2025-08-21'} // Only highlight today on current week
               hasExercises={!!hasExercisesByDayId[day.id]}
               dateISO={dateISO}
