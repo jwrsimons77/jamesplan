@@ -1,8 +1,10 @@
 import React from 'react'
 
 export default function DayCard({ day, index, rearrange, onOpen, metrics, onMoveUp, onMoveDown, canMoveUp, canMoveDown, isToday, hasExercises, completed, onToggleComplete, dateISO, allExercisesCompleted }) {
-  const weekday = dateISO ? new Date(dateISO).toLocaleDateString(undefined, { weekday: 'long' }) : '';
-  const shortDate = dateISO ? new Date(dateISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+  const weekday = dateISO ? new Date(dateISO + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'long' }) : '';
+  const shortDate = dateISO ? new Date(dateISO + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+  
+  console.log('DayCard rendering:', { day: day?.focus, dateISO, weekday, shortDate, isToday });
 
   return (
     <div 

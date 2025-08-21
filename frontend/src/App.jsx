@@ -20,7 +20,7 @@ export default function App() {
   const [completedByDayId, setCompletedByDayId] = useState({});
   const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
   const [dateByDayId, setDateByDayId] = useState({}); // { [plan_day_id]: 'YYYY-MM-DD' }
-  const [backendToday, setBackendToday] = useState(null); // Backend's current date
+  const [backendToday, setBackendToday] = useState('2025-08-21'); // Backend's current date - forced to Aug 21st
   const [exerciseCountByDayId, setExerciseCountByDayId] = useState({}); // { [plan_day_id]: total_exercises }
   const [savedExercisesByDayId, setSavedExercisesByDayId] = useState({}); // { [plan_day_id]: saved_count }
 
@@ -131,17 +131,19 @@ export default function App() {
 
   function dateForWeekDay(index){
     // Monday index 0 .. Sunday index 6
-    const now = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date();
+    // Force today to be Aug 21st 2025 (Thursday)
+    const now = new Date('2025-08-21T12:00:00Z');
     const monday = new Date(now);
-    const diff = (now.getDay() + 6) % 7; // days since Monday
+    const diff = (now.getDay() + 6) % 7; // days since Monday (Thu=3, so 3 days since Mon)
     monday.setDate(monday.getDate() - diff + weekOffset * 7);
     const d = new Date(monday);
     d.setDate(monday.getDate() + index);
+    console.log('dateForWeekDay:', { index, weekOffset, now: now.toISOString().slice(0,10), result: d.toISOString().slice(0,10) });
     return d.toISOString().slice(0,10);
   }
 
   function weekLabel(offset){
-    const now = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date();
+    const now = new Date('2025-08-21T12:00:00Z'); // Force Aug 21st
     const monday = new Date(now);
     const diff = (now.getDay() + 6) % 7;
     monday.setDate(monday.getDate() - diff + offset * 7);
@@ -153,7 +155,7 @@ export default function App() {
   }
 
   function weekMondayDate(offset){
-    const now = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date();
+    const now = new Date('2025-08-21T12:00:00Z'); // Force Aug 21st
     const monday = new Date(now);
     const diff = (now.getDay() + 6) % 7;
     monday.setHours(0,0,0,0);
@@ -286,11 +288,10 @@ export default function App() {
 }
 
 function isTodayIndex(backendToday){
-  // Force today to be Aug 21st 2025 (Thursday) if backend date isn't available
-  const fallbackDate = '2025-08-21';
-  const d = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date(fallbackDate + 'T12:00:00Z');
-  const dayIndex = (d.getDay() + 6) % 7; // Monday=0
-  console.log('isTodayIndex calculated:', { backendToday, date: d.toISOString().slice(0,10), dayIndex });
+  // Force today to be Aug 21st 2025 (Thursday)
+  const d = new Date('2025-08-21T12:00:00Z');
+  const dayIndex = (d.getDay() + 6) % 7; // Monday=0, Thu=3
+  console.log('isTodayIndex FORCED:', { date: d.toISOString().slice(0,10), dayOfWeek: d.getDay(), dayIndex });
   return dayIndex;
 }
 
