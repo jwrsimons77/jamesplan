@@ -5,6 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  VITE_API_BASE = "https://jamesplan-production.up.railway.app"
 
 # Optional: redirect all routes to index.html for SPA behavior
 [[redirects]]
