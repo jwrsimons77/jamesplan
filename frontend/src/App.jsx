@@ -221,10 +221,6 @@ export default function App() {
   return (
     <div className="wrap">
       <div style={{position:'sticky', top:0, zIndex:30, background:'var(--bg)', paddingTop:'env(safe-area-inset-top)', margin:'-12px -12px 12px -12px', padding:'12px'}}>
-        {/* DEBUG: Force show Aug 21st */}
-        <div style={{background:'red', color:'white', padding:'4px 8px', fontSize:12, marginBottom:8, textAlign:'center'}}>
-          DEBUG v1.0.2: FORCED DATE = 2025-08-21 (Thu) | API: {import.meta.env.VITE_API_BASE || 'NOT SET'} | LocalStorage: {localStorage.getItem('apiBase') || 'NOT SET'}
-        </div>
         <div className="row" style={{justifyContent:'space-between', alignItems:'center', gap:12}}>
           <UserSwitcher currentUserId={currentUserId} onChange={(id)=>{ setCurrentUserId(id); }} />
           <div className="row" style={{gap:8, alignItems:'center'}}>
@@ -236,24 +232,7 @@ export default function App() {
         <div style={{marginTop:8}}>
           <TopTools rearrange={rearrange} setRearrange={setRearrange} weekOffset={weekOffset} setWeekOffset={setWeekOffset} />
         </div>
-        {/* DEBUG: API Test */}
-        <div style={{background:'orange', color:'black', padding:'4px 8px', fontSize:10, marginTop:4}}>
-          <button style={{fontSize:10, padding:'2px 4px', marginRight:8}} onClick={async () => {
-            try {
-              const { getApiBase } = await import('./services/api');
-              const base = getApiBase();
-              const response = await fetch(base + '/api/plan');
-              const data = await response.json();
-              alert('API SUCCESS: ' + JSON.stringify({base, planName: data.plan?.name, daysCount: data.days?.length}));
-            } catch (e) {
-              alert('API ERROR: ' + e.message);
-            }
-          }}>Test API</button>
-          <button style={{fontSize:10, padding:'2px 4px'}} onClick={() => {
-            localStorage.setItem('apiBase', 'https://jamesplan-production.up.railway.app');
-            location.reload();
-          }}>Force Railway API</button>
-        </div>
+
       </div>
 
       <div style={{marginTop:12, display:'grid', gap:12}}>
