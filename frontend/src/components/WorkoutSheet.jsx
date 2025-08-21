@@ -5,7 +5,7 @@ const QUEUE_KEY = 'queuedSets';
 function readQueue(){ try { return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')||[] } catch { return [] } }
 function writeQueue(arr){ localStorage.setItem(QUEUE_KEY, JSON.stringify(arr)); }
 
-export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetAdded, onEnsureLog, userId, selectedDateISO }){
+export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetAdded, onEnsureLog, userId, selectedDateISO, onExerciseSaved }){
   const [exercises, setExercises] = useState([]);
   const [logId, setLogId] = useState(initialLogId || null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -101,7 +101,14 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
     }
     setSavedExIds(prev => {
       const next = new Set(prev);
+      const wasAlreadySaved = prev.has(ex.id);
       next.add(ex.id);
+      
+      // Notify parent of saved exercise count
+      if (onExerciseSaved && !wasAlreadySaved) {
+        onExerciseSaved(day.id, next.size);
+      }
+      
       return next;
     });
     setMinimizedExIds(prev => {

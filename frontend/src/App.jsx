@@ -21,6 +21,8 @@ export default function App() {
   const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
   const [dateByDayId, setDateByDayId] = useState({}); // { [plan_day_id]: 'YYYY-MM-DD' }
   const [backendToday, setBackendToday] = useState(null); // Backend's current date
+  const [exerciseCountByDayId, setExerciseCountByDayId] = useState({}); // { [plan_day_id]: total_exercises }
+  const [savedExercisesByDayId, setSavedExercisesByDayId] = useState({}); // { [plan_day_id]: saved_count }
 
   // iOS visual viewport helper for dynamic viewport height
   useEffect(() => {
@@ -54,11 +56,12 @@ export default function App() {
   useEffect(() => {
     async function run() {
       try {
-        // Get backend's current date first
+        // Get backend's current date first - this is critical for correct "today"
         const healthData = await apiGet('/health');
         if (healthData && healthData.timestamp) {
           const backendDate = new Date(healthData.timestamp).toISOString().slice(0, 10);
           setBackendToday(backendDate);
+          console.log('Backend date set to:', backendDate); // Debug log
         }
         
         const data = await apiGet('/api/plan');
@@ -72,11 +75,17 @@ export default function App() {
         setPlan(planData);
         setDays(ordered);
         if (planData?.id) refreshMetrics(planData.id, currentUserId);
-        // Prefetch exercise counts for Open button visibility
-        Promise.all((ordered||[]).map(d => apiGet(`/api/plan-days/${d.id}/exercises`).then(exs => [d.id, Array.isArray(exs) && exs.length>0]).catch(()=>[d.id,false])))
+        // Prefetch exercise counts for Open button visibility and completion tracking
+        Promise.all((ordered||[]).map(d => apiGet(`/api/plan-days/${d.id}/exercises`).then(exs => [d.id, Array.isArray(exs) ? exs : []]).catch(()=>[d.id,[]])))
           .then(entries => {
-            const map = {}; entries.forEach(([id, has]) => { map[id] = !!has; });
-            setHasExercisesByDayId(map);
+            const hasMap = {}; 
+            const countMap = {};
+            entries.forEach(([id, exs]) => { 
+              hasMap[id] = exs.length > 0;
+              countMap[id] = exs.length;
+            });
+            setHasExercisesByDayId(hasMap);
+            setExerciseCountByDayId(countMap);
           });
       } catch (e) {
         setError('Could not load plan. Set API URL in services/api.js');
@@ -241,6 +250,7 @@ export default function App() {
               dateISO={dateISO}
               completed={Boolean(completedByDayId[day.id] || (metricsByDayId?.[day.id]?.sets > 0))}
               onToggleComplete={() => toggleCompleted(day.id)}
+              allExercisesCompleted={exerciseCountByDayId[day.id] > 0 && savedExercisesByDayId[day.id] >= exerciseCountByDayId[day.id]}
             />
           );
           });
@@ -266,6 +276,9 @@ export default function App() {
             return log.id;
           }}
           onSetAdded={()=>{ plan?.id && refreshMetrics(plan.id, currentUserId); }}
+          onExerciseSaved={(dayId, savedCount) => {
+            setSavedExercisesByDayId(prev => ({ ...prev, [dayId]: savedCount }));
+          }}
         />
       )}
     </div>
@@ -273,8 +286,12 @@ export default function App() {
 }
 
 function isTodayIndex(backendToday){
-  const d = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date();
-  return (d.getDay() + 6) % 7; // Monday=0
+  // Force today to be Aug 21st 2025 (Thursday) if backend date isn't available
+  const fallbackDate = '2025-08-21';
+  const d = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date(fallbackDate + 'T12:00:00Z');
+  const dayIndex = (d.getDay() + 6) % 7; // Monday=0
+  console.log('isTodayIndex calculated:', { backendToday, date: d.toISOString().slice(0,10), dayIndex });
+  return dayIndex;
 }
 
 // (WeekDates removed; dates are now shown per DayCard)

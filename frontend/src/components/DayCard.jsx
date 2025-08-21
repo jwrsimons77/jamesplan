@@ -1,11 +1,19 @@
 import React from 'react'
 
-export default function DayCard({ day, index, rearrange, onOpen, metrics, onMoveUp, onMoveDown, canMoveUp, canMoveDown, isToday, hasExercises, completed, onToggleComplete, dateISO }) {
+export default function DayCard({ day, index, rearrange, onOpen, metrics, onMoveUp, onMoveDown, canMoveUp, canMoveDown, isToday, hasExercises, completed, onToggleComplete, dateISO, allExercisesCompleted }) {
   const weekday = dateISO ? new Date(dateISO).toLocaleDateString(undefined, { weekday: 'long' }) : '';
   const shortDate = dateISO ? new Date(dateISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
 
   return (
-    <div className="daycard" style={{opacity: day ? 1 : .5, borderColor: isToday ? 'var(--brand)' : undefined, boxShadow: isToday ? '0 0 0 1px rgba(14,124,102,0.35), 0 8px 24px rgba(0,0,0,0.25)' : undefined}}>
+    <div 
+      className="daycard" 
+      style={{
+        opacity: day ? 1 : .5, 
+        borderColor: isToday ? 'var(--brand)' : (allExercisesCompleted ? 'var(--brand)' : undefined), 
+        boxShadow: isToday ? '0 0 0 1px rgba(14,124,102,0.35), 0 8px 24px rgba(0,0,0,0.25)' : (allExercisesCompleted ? '0 0 0 1px rgba(14,124,102,0.2), 0 4px 12px rgba(14,124,102,0.15)' : undefined),
+        background: allExercisesCompleted ? 'rgba(14,124,102,0.05)' : undefined
+      }}
+    >
       {/* Header: Weekday + Date + Today pill */}
       <div className="row" style={{justifyContent:'space-between', alignItems:'center'}}>
         <div className="row" style={{gap:8, alignItems:'baseline'}}>
