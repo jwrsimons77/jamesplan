@@ -11,6 +11,7 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef(null);
   const [savedExIds, setSavedExIds] = useState(() => new Set());
+  const [minimizedExIds, setMinimizedExIds] = useState(() => new Set());
   const [restSec, setRestSec] = useState(90);
   const [timer, setTimer] = useState(0);
   
@@ -103,6 +104,11 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
       next.add(ex.id);
       return next;
     });
+    setMinimizedExIds(prev => {
+      const next = new Set(prev);
+      next.add(ex.id);
+      return next;
+    });
   }
 
   return (
@@ -132,24 +138,63 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
         </div>
 
         <div ref={listRef} className="sheet-body">
-          {exercises.map((ex, i) => (
-            <div key={ex.id} id={'ex-'+i} className="card" style={{marginBottom:10, background:'var(--surface)'}}>
-              <div className="row" style={{justifyContent:'space-between', alignItems:'center'}}>
-                <div>
-                  <strong>{String.fromCharCode(65+i)}. {ex.name}</strong><br/>
-                  <small className="muted">{ex.notes || ''}</small>
+          {exercises.map((ex, i) => {
+            const isSaved = savedExIds.has(ex.id);
+            const isMinimized = minimizedExIds.has(ex.id);
+            return (
+              <div 
+                key={ex.id} 
+                id={'ex-'+i} 
+                className="card" 
+                style={{
+                  marginBottom:10, 
+                  background: isSaved ? 'rgba(14,124,102,0.08)' : 'var(--surface)',
+                  border: isSaved ? '1px solid rgba(14,124,102,0.2)' : '1px solid var(--line)'
+                }}
+              >
+                <div className="row" style={{justifyContent:'space-between', alignItems:'center'}}>
+                  <div>
+                    <strong style={{color: isSaved ? 'var(--brand)' : 'inherit'}}>
+                      {String.fromCharCode(65+i)}. {ex.name}
+                    </strong><br/>
+                    <small className="muted">{ex.notes || ''}</small>
+                  </div>
+                  <div className="row" style={{gap:8, alignItems:'center'}}>
+                    {isSaved && (
+                      <span className="pill" style={{padding:'2px 8px', fontSize:12, background:'rgba(14,124,102,0.15)', color:'var(--brand)'}}>✓ Saved</span>
+                    )}
+                    {isSaved && (
+                      <button 
+                        className="btn" 
+                        style={{minWidth:60, fontSize:12, padding:'4px 8px'}}
+                        onClick={() => {
+                          setMinimizedExIds(prev => {
+                            const next = new Set(prev);
+                            if (isMinimized) {
+                              next.delete(ex.id);
+                            } else {
+                              next.add(ex.id);
+                            }
+                            return next;
+                          });
+                        }}
+                        aria-label={isMinimized ? 'Expand exercise' : 'Minimize exercise'}
+                      >
+                        {isMinimized ? 'Expand' : 'Minimize'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {savedExIds.has(ex.id) && (
-                  <span className="pill" style={{padding:'2px 8px', fontSize:12, background:'rgba(14,124,102,0.15)'}}>✓ Saved</span>
+                {!isMinimized && (
+                  <SetTable
+                    exercise={ex}
+                    userId={userId}
+                    onSaveRows={(rows)=>saveExercise(ex, rows)}
+                  />
                 )}
               </div>
-              <SetTable
-                exercise={ex}
-                userId={userId}
-                onSaveRows={(rows)=>saveExercise(ex, rows)}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
