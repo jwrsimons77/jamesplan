@@ -22,7 +22,19 @@ export default function App() {
   const [dateByDayId, setDateByDayId] = useState({}); // { [plan_day_id]: 'YYYY-MM-DD' }
   const [backendToday, setBackendToday] = useState('2025-08-21'); // Backend's current date - forced to Aug 21st
   const [exerciseCountByDayId, setExerciseCountByDayId] = useState({}); // { [plan_day_id]: total_exercises }
-  const [savedExercisesByDayId, setSavedExercisesByDayId] = useState({}); // { [plan_day_id]: saved_count }
+  const [savedExercisesByDayId, setSavedExercisesByDayId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('savedExercisesByDayId');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  }); // { [plan_day_id]: saved_count }
+
+  // Persist saved exercises to localStorage
+  useEffect(() => {
+    localStorage.setItem('savedExercisesByDayId', JSON.stringify(savedExercisesByDayId));
+  }, [savedExercisesByDayId]);
 
   // iOS visual viewport helper for dynamic viewport height
   useEffect(() => {
@@ -248,25 +260,15 @@ export default function App() {
         {(() => {
           const enriched = days.map((d, i) => ({ day: d, weekIndex: i }));
           const todayIdx = isTodayIndex(backendToday);
-          // FORCE: Show days in the correct order starting with Thursday Aug 21st (today)
-          const forcedDates = [
-            '2025-08-21', // Thu: Flying to Italy (day 34) 
-            '2025-08-22', // Fri: Touch Rugby (day 35)
-            '2025-08-23', // Sat: Touch Rugby (day 36) 
-            '2025-08-24', // Sun: Rest (day 37)
-            '2025-08-25', // Mon: Recovery (day 38)
-            '2025-08-26', // Tue: Upper Body (day 39)
-            '2025-08-27', // Wed: Tempo/Intervals (day 40)
-            '2025-08-28', // Thu: Upper Body Push (day 41)
-            '2025-08-29', // Fri: Upper Body Pull & Easy Run (day 42)
-            '2025-08-30', // Sat: Long Run (day 43)
-            '2025-08-31', // Sun: Rest (day 44)
-            '2025-09-01'  // Mon: Easy Run & Lower Body (day 45)
-          ];
+          // Calculate dates based on weekOffset from Aug 21st (Thursday) base
+          const baseDate = new Date('2025-08-21T12:00:00Z'); // Thursday Aug 21st
+          baseDate.setDate(baseDate.getDate() + (weekOffset * 7)); // Add weeks
           
           const display = enriched; // Use original order from backend
           return display.map(({ day, weekIndex }, i2) => {
-            const dateISO = forcedDates[i2] || '2025-08-21'; // Fallback to Aug 21st
+            const d = new Date(baseDate);
+            d.setDate(baseDate.getDate() + i2); // Add days from base
+            const dateISO = d.toISOString().slice(0,10);
             return (
             <DayCard
               key={day.id}
@@ -280,7 +282,7 @@ export default function App() {
               onMoveDown={() => moveDay(weekIndex, 1)}
               canMoveUp={weekIndex > 0}
               canMoveDown={weekIndex < days.length - 1}
-              isToday={dateISO === '2025-08-21'} // Force today to be Aug 21st
+              isToday={weekOffset === 0 && dateISO === '2025-08-21'} // Only highlight today on current week
               hasExercises={!!hasExercisesByDayId[day.id]}
               dateISO={dateISO}
               completed={Boolean(completedByDayId[day.id] || (metricsByDayId?.[day.id]?.sets > 0))}
