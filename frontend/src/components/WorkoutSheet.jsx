@@ -116,7 +116,7 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
       <div className="card workout-modal">
         {/* Top bar with section chips, timer and Finish */}
         <div className="row topbar" style={{justifyContent:'space-between', alignItems:'center', gap:8}}>
-          <div className="row" style={{gap:6, overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
+          <div className="row" style={{gap:6, overflowX:'auto', WebkitOverflowScrolling:'touch', minWidth:0, flex:'1 1 0'}}>
             {letters.map((ch, i) => (
               <button key={i} className="pill" style={{padding:'4px 8px', fontSize:12}} onClick={()=>{
                 const el = document.getElementById('ex-'+i);
@@ -126,7 +126,7 @@ export default function WorkoutSheet({ day, logId: initialLogId, onClose, onSetA
               </button>
             ))}
           </div>
-          <div className="row" style={{gap:8}}>
+          <div className="row" style={{gap:8, flexShrink:0}}>
             <div className="pill" style={{padding:'4px 8px', fontSize:12}}>{formatMMSS(timer)}</div>
             <button className="btn" onClick={()=>setTimer(restSec)} style={{minWidth:64}} aria-label="Start rest timer">Rest</button>
             <button className="btn" onClick={onClose} style={{minWidth:88}} aria-label="Finish workout">Finish</button>
