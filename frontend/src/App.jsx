@@ -24,17 +24,27 @@ export default function App() {
   const [exerciseCountByDayId, setExerciseCountByDayId] = useState({}); // { [plan_day_id]: total_exercises }
   const [savedExercisesByDayId, setSavedExercisesByDayId] = useState(() => {
     try {
-      const saved = localStorage.getItem('savedExercisesByDayId');
+      const saved = localStorage.getItem(`savedExercisesByDayId_${currentUserId}`);
       return saved ? JSON.parse(saved) : {};
     } catch (e) {
       return {};
     }
   }); // { [plan_day_id]: saved_count }
 
-  // Persist saved exercises to localStorage
+  // Persist saved exercises to localStorage per user
   useEffect(() => {
-    localStorage.setItem('savedExercisesByDayId', JSON.stringify(savedExercisesByDayId));
-  }, [savedExercisesByDayId]);
+    localStorage.setItem(`savedExercisesByDayId_${currentUserId}`, JSON.stringify(savedExercisesByDayId));
+  }, [savedExercisesByDayId, currentUserId]);
+
+  // Reset completion state when user changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`savedExercisesByDayId_${currentUserId}`);
+      setSavedExercisesByDayId(saved ? JSON.parse(saved) : {});
+    } catch (e) {
+      setSavedExercisesByDayId({});
+    }
+  }, [currentUserId]);
 
   // iOS visual viewport helper for dynamic viewport height
   useEffect(() => {
@@ -247,7 +257,7 @@ export default function App() {
             // Regular weeks: 7-day cycle (Tue-Mon) - days 39-45 repeating
             const regularDays = days.slice(5); // Days 39-45 (7 days)
             weekDays = regularDays; // Show the 7-day pattern
-            baseDate = new Date('2025-08-27T12:00:00Z'); // Tuesday Aug 27th (start of regular cycle)
+            baseDate = new Date('2025-08-26T12:00:00Z'); // Tuesday Aug 26th (start of regular cycle)
             baseDate.setDate(baseDate.getDate() + ((weekOffset - 1) * 7)); // Add weeks from week 1
           }
           
