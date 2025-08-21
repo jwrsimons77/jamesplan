@@ -327,5 +327,10 @@ app.put('/api/plan/order', async (req, res) => {
   }
 });
 
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 const port = process.env.PORT || 8080;
 app.listen(port, () => console.log(`API listening on :${port}`));
