@@ -42,9 +42,31 @@ a, a:visited, a:active { color: var(--ink) !important; text-decoration-color: cu
 .workout-modal .sheet-body { height: calc(var(--vvh) * 0.8 - 60px); overflow-y: auto; padding: 0 12px calc(120px + env(safe-area-inset-bottom)) 12px; -webkit-overflow-scrolling: touch; min-height: 0; }
 
 @media (max-width: 600px) {
-	.workout-modal { left: 0 !important; right: 0 !important; width: 100vw !important; transform: none !important; border-top-left-radius: 16px; border-top-right-radius: 16px; max-height: calc(var(--vvh) - env(safe-area-inset-top)); margin: 0 !important; }
-	.workout-modal .sheet-body { height: calc(var(--vvh) * 0.75 - 60px); overflow-y: auto; padding: 0 12px calc(140px + env(safe-area-inset-bottom)) 12px; -webkit-overflow-scrolling: touch; min-height: 0; }
-	.workout-modal .topbar { padding-left: 12px; padding-right: 12px; }
+	.workout-modal { 
+		left: 0 !important; 
+		right: 0 !important; 
+		width: 100vw !important; 
+		transform: none !important; 
+		border-top-left-radius: 16px; 
+		border-top-right-radius: 16px; 
+		max-height: calc(var(--vvh) - env(safe-area-inset-top)); 
+		margin: 0 !important; 
+		position: fixed !important;
+		box-sizing: border-box;
+	}
+	.workout-modal .sheet-body { 
+		height: calc(var(--vvh) * 0.75 - 60px); 
+		overflow-y: auto; 
+		padding: 0 16px calc(140px + env(safe-area-inset-bottom)) 16px; 
+		-webkit-overflow-scrolling: touch; 
+		min-height: 0; 
+		box-sizing: border-box;
+	}
+	.workout-modal .topbar { 
+		padding-left: 16px; 
+		padding-right: 16px; 
+		box-sizing: border-box;
+	}
 }
 
 /* Mobile button grid for workout actions */

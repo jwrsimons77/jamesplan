@@ -20,6 +20,7 @@ export default function App() {
   const [completedByDayId, setCompletedByDayId] = useState({});
   const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
   const [dateByDayId, setDateByDayId] = useState({}); // { [plan_day_id]: 'YYYY-MM-DD' }
+  const [backendToday, setBackendToday] = useState(null); // Backend's current date
 
   // iOS visual viewport helper for dynamic viewport height
   useEffect(() => {
@@ -53,6 +54,13 @@ export default function App() {
   useEffect(() => {
     async function run() {
       try {
+        // Get backend's current date first
+        const healthData = await apiGet('/health');
+        if (healthData && healthData.timestamp) {
+          const backendDate = new Date(healthData.timestamp).toISOString().slice(0, 10);
+          setBackendToday(backendDate);
+        }
+        
         const data = await apiGet('/api/plan');
         const planData = data.plan;
         let ordered = data.days || [];
@@ -114,7 +122,7 @@ export default function App() {
 
   function dateForWeekDay(index){
     // Monday index 0 .. Sunday index 6
-    const now = new Date();
+    const now = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date();
     const monday = new Date(now);
     const diff = (now.getDay() + 6) % 7; // days since Monday
     monday.setDate(monday.getDate() - diff + weekOffset * 7);
@@ -124,7 +132,7 @@ export default function App() {
   }
 
   function weekLabel(offset){
-    const now = new Date();
+    const now = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date();
     const monday = new Date(now);
     const diff = (now.getDay() + 6) % 7;
     monday.setDate(monday.getDate() - diff + offset * 7);
@@ -136,7 +144,7 @@ export default function App() {
   }
 
   function weekMondayDate(offset){
-    const now = new Date();
+    const now = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date();
     const monday = new Date(now);
     const diff = (now.getDay() + 6) % 7;
     monday.setHours(0,0,0,0);
@@ -206,7 +214,7 @@ export default function App() {
       <div style={{marginTop:12, display:'grid', gap:12}}>
         {(() => {
           const enriched = days.map((d, i) => ({ day: d, weekIndex: i }));
-          const todayIdx = isTodayIndex();
+          const todayIdx = isTodayIndex(backendToday);
           const display = (rearrange || weekOffset !== 0)
             ? enriched
             : [...enriched.slice(todayIdx), ...enriched.slice(0, todayIdx)];
@@ -228,7 +236,7 @@ export default function App() {
               onMoveDown={() => moveDay(weekIndex, 1)}
               canMoveUp={weekIndex > 0}
               canMoveDown={weekIndex < days.length - 1}
-              isToday={weekOffset === 0 && isTodayIndex() === weekIndex}
+              isToday={weekOffset === 0 && isTodayIndex(backendToday) === weekIndex}
               hasExercises={!!hasExercisesByDayId[day.id]}
               dateISO={dateISO}
               completed={Boolean(completedByDayId[day.id] || (metricsByDayId?.[day.id]?.sets > 0))}
@@ -264,8 +272,8 @@ export default function App() {
   );
 }
 
-function isTodayIndex(){
-  const d = new Date();
+function isTodayIndex(backendToday){
+  const d = backendToday ? new Date(backendToday + 'T12:00:00Z') : new Date();
   return (d.getDay() + 6) % 7; // Monday=0
 }
 
