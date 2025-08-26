@@ -248,19 +248,25 @@ export default function App() {
         {(() => {
           let weekDays, baseDate;
           
-          if (weekOffset === 0) {
+          // Determine if we should show Italy week or regular program
+          const today = new Date();
+          const italyEndDate = new Date('2025-08-26T23:59:59'); // Italy week ends Aug 26th
+          const shouldShowItalyWeek = today <= italyEndDate && weekOffset === 0;
+          
+          if (shouldShowItalyWeek) {
             // Week 0: Italy week (Thu-Mon, 5 days) - days 34-38
             weekDays = days.slice(0, 5); // First 5 days
-            baseDate = new Date(); // Current date for week 0 start
+            baseDate = new Date('2025-08-22T00:00:00'); // Start Italy week on Thursday Aug 22nd
           } else {
-            // Regular weeks: 7-day cycle (Tue-Mon) - days 39-45 repeating
+            // Regular weeks: 7-day cycle starting Tue Aug 27th - days 39-45 repeating
             const regularDays = days.slice(5); // Days 39-45 (7 days)
             weekDays = regularDays; // Show the 7-day pattern
-            baseDate = new Date(); // Current date for regular week calculation
-            // Adjust to next Tuesday after current date
-            const daysSinceTuesday = (baseDate.getDay() + 5) % 7; // Days since last Tuesday
-            baseDate.setDate(baseDate.getDate() - daysSinceTuesday + 7); // Next Tuesday
-            baseDate.setDate(baseDate.getDate() + ((weekOffset - 1) * 7)); // Add weeks from week 1
+            
+            // Calculate which regular week to show
+            const regularWeekOffset = shouldShowItalyWeek ? weekOffset - 1 : weekOffset;
+            
+            baseDate = new Date('2025-08-27T00:00:00'); // Start regular program on Tuesday Aug 27th
+            baseDate.setDate(baseDate.getDate() + (regularWeekOffset * 7)); // Add weeks from week 1
           }
           
           const enriched = weekDays.map((d, i) => ({ day: d, weekIndex: i }));
@@ -281,7 +287,7 @@ export default function App() {
               onMoveDown={() => moveDay(weekIndex, 1)}
               canMoveUp={weekIndex > 0}
               canMoveDown={weekIndex < weekDays.length - 1}
-              isToday={weekOffset === 0 && dateISO === new Date().toISOString().slice(0,10)} // Only highlight today on current week
+              isToday={dateISO === new Date().toISOString().slice(0,10)} // Highlight today regardless of week
               hasExercises={!!hasExercisesByDayId[day.id]}
               dateISO={dateISO}
               completed={Boolean(completedByDayId[day.id] || (metricsByDayId?.[day.id]?.sets > 0))}
