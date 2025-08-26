@@ -20,7 +20,7 @@ export default function App() {
   const [completedByDayId, setCompletedByDayId] = useState({});
   const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
   const [dateByDayId, setDateByDayId] = useState({}); // { [plan_day_id]: 'YYYY-MM-DD' }
-  const [backendToday, setBackendToday] = useState('2025-08-21'); // Backend's current date - forced to Aug 21st
+  const [backendToday, setBackendToday] = useState(new Date().toISOString().slice(0, 10)); // Backend's current date
   const [exerciseCountByDayId, setExerciseCountByDayId] = useState({}); // { [plan_day_id]: total_exercises }
   const [savedExercisesByDayId, setSavedExercisesByDayId] = useState(() => {
     try {
@@ -153,8 +153,7 @@ export default function App() {
 
   function dateForWeekDay(index){
     // Monday index 0 .. Sunday index 6
-    // Force today to be Aug 21st 2025 (Thursday)
-    const now = new Date('2025-08-21T12:00:00Z');
+    const now = new Date();
     const monday = new Date(now);
     const diff = (now.getDay() + 6) % 7; // days since Monday (Thu=3, so 3 days since Mon)
     monday.setDate(monday.getDate() - diff + weekOffset * 7);
@@ -165,7 +164,7 @@ export default function App() {
   }
 
   function weekLabel(offset){
-    const now = new Date('2025-08-21T12:00:00Z'); // Force Aug 21st
+    const now = new Date();
     const monday = new Date(now);
     const diff = (now.getDay() + 6) % 7;
     monday.setDate(monday.getDate() - diff + offset * 7);
@@ -177,7 +176,7 @@ export default function App() {
   }
 
   function weekMondayDate(offset){
-    const now = new Date('2025-08-21T12:00:00Z'); // Force Aug 21st
+    const now = new Date();
     const monday = new Date(now);
     const diff = (now.getDay() + 6) % 7;
     monday.setHours(0,0,0,0);
@@ -252,12 +251,15 @@ export default function App() {
           if (weekOffset === 0) {
             // Week 0: Italy week (Thu-Mon, 5 days) - days 34-38
             weekDays = days.slice(0, 5); // First 5 days
-            baseDate = new Date('2025-08-21T12:00:00Z'); // Thursday Aug 21st
+            baseDate = new Date(); // Current date for week 0 start
           } else {
             // Regular weeks: 7-day cycle (Tue-Mon) - days 39-45 repeating
             const regularDays = days.slice(5); // Days 39-45 (7 days)
             weekDays = regularDays; // Show the 7-day pattern
-            baseDate = new Date('2025-08-26T12:00:00Z'); // Tuesday Aug 26th (start of regular cycle)
+            baseDate = new Date(); // Current date for regular week calculation
+            // Adjust to next Tuesday after current date
+            const daysSinceTuesday = (baseDate.getDay() + 5) % 7; // Days since last Tuesday
+            baseDate.setDate(baseDate.getDate() - daysSinceTuesday + 7); // Next Tuesday
             baseDate.setDate(baseDate.getDate() + ((weekOffset - 1) * 7)); // Add weeks from week 1
           }
           
@@ -279,7 +281,7 @@ export default function App() {
               onMoveDown={() => moveDay(weekIndex, 1)}
               canMoveUp={weekIndex > 0}
               canMoveDown={weekIndex < weekDays.length - 1}
-              isToday={weekOffset === 0 && dateISO === '2025-08-21'} // Only highlight today on current week
+              isToday={weekOffset === 0 && dateISO === new Date().toISOString().slice(0,10)} // Only highlight today on current week
               hasExercises={!!hasExercisesByDayId[day.id]}
               dateISO={dateISO}
               completed={Boolean(completedByDayId[day.id] || (metricsByDayId?.[day.id]?.sets > 0))}
@@ -320,8 +322,7 @@ export default function App() {
 }
 
 function isTodayIndex(backendToday){
-  // Force today to be Aug 21st 2025 (Thursday)
-  const d = new Date('2025-08-21T12:00:00Z');
+  const d = new Date();
   const dayIndex = (d.getDay() + 6) % 7; // Monday=0, Thu=3
   console.log('isTodayIndex FORCED:', { date: d.toISOString().slice(0,10), dayOfWeek: d.getDay(), dayIndex });
   return dayIndex;
